@@ -1,22 +1,23 @@
 package fund
 
-// Use type assertions to assert the passed-in value to be the same
-// as your actual type.
-type SearchItem interface {
+// Create an interface, steal ideas from part of core sort package.
+type SearchSlice interface {
+	// Return true if val is less than value stored at index i
+	Less(val interface{}, i int) bool
 
-	// Is the current item less than SearchItem?
-	Less(SearchItem) bool
+	// Return true if val is equal to value at index i
+	Equals(val interface{}, i int) bool
 
-	// Is the current item equal to SearchItem?
-	Equals(SearchItem) bool
+	// Return the length of the slice
+	Len() int
 }
 
 // Return the index of of item in the sorted slice values. If item
 // doesn't exist, return -1.
-func Find(item SearchItem, values []SearchItem) int {
+func Find(item interface{}, values SearchSlice) int {
 	low := 0
 	mid := 0
-	top := len(values) - 1
+	top := values.Len() - 1
 
 	// Continue running so long as low has not overtaken top value
 	for low <= top {
@@ -26,13 +27,13 @@ func Find(item SearchItem, values []SearchItem) int {
 
 		// Check out midpoint. Is it the correct value? If so, we're done.
 		// Return that index.
-		if item.Equals(values[mid]) {
+		if values.Equals(item, mid) {
 			return mid
 		}
 
 		// Otherwise, check if our current item is lesser or greater
 		// to determine how we should proceed.
-		if item.Less(values[mid]) {
+		if values.Less(item, mid) {
 
 			// Our item is less than the midpoint, so next time, we'll check
 			// in vals[low..mid-1]
