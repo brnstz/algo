@@ -6,24 +6,28 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"testing"
 )
 
-func loadUnsortedFile(filename string) (sorting.StringSlice, error) {
-	// Create an empty slice of strings, using interface from the sort
+// Load unsorted data from filename. Return a sort.StringSlice. This can be
+// converted to sorting.StringSlice (supports CopyAux()) for mergesort.
+func createSortSlice(filename string, t *testing.T) (sort.StringSlice, int) {
+	// Create an empty slice of strings, using interface from the sorting
 	// package
-	strSlc := sorting.StringSlice{}
+	strSlc := sort.StringSlice{}
 
 	// Open a file of strings to sort
 	fh, err := os.Open(filename)
 	if err != nil {
-		return strSlc, err
+		t.Fatal(err)
 	}
 	defer fh.Close()
 
 	// Declare variables to temporarily store a word and count the
 	// total number of words.
 	var str string
+	var count int
 
 	for {
 		// Read one string from the file
@@ -34,40 +38,77 @@ func loadUnsortedFile(filename string) (sorting.StringSlice, error) {
 
 		// Add a new string to the slice and increment count
 		strSlc = append(strSlc, str)
+
+		count++
 	}
 
-	return strSlc, nil
-
+	return strSlc, count
 }
 
-/*
-func TestInsertionSort(t *testing.T) {
-	strSlc, err := loadUnsortedFile("../data/words3.txt")
-	if err != nil {
-		t.Fatal("Unable to load file: ", err)
+// Create a slice with the sorting.StringSlice interface by converting a
+// sort.StringSlice
+func createSortingSlice(filename string, t *testing.T) (sorting.StringSlice, int) {
+	sortSlice, count := createSortSlice(filename, t)
+	sortingSlice := make(sorting.StringSlice, count)
+
+	for i, val := range sortSlice {
+		sortingSlice[i] = val
 	}
+
+	return sortingSlice, count
+}
+
+// Verify a sort.StringSlice by checking each successive value is >=
+func verifySort(strSlc sort.StringSlice, count int, t *testing.T) {
+	// Check that list sort has suceeded
+	for i := 0; i < count-1; i++ {
+		if strSlc.Less(i+1, i) {
+			t.Fatal("These values are not sorted:", strSlc[i:i+2])
+		}
+	}
+}
+
+// Verify a sorting.StringSlice by checking each successive value is >=
+func verifySorting(strSlc sorting.StringSlice, count int, t *testing.T) {
+	// Check that list sort has suceeded
+	for i := 0; i < count-1; i++ {
+		if strSlc.Less(i+1, i) {
+			t.Fatal("These values are not sorted:", strSlc[i:i+2])
+		}
+	}
+}
+func TestInsertionSort(t *testing.T) {
+	strSlc, count := createSortSlice("../data/words3.txt", t)
+
 	sorting.InsertionSort(strSlc)
 
-	// Check that list sort has suceeded
-	if strSlc[0] != "all" {
-		t.Fatal("Expected 'all' in first position of sorted list.")
-	}
-
-	if strSlc[strSlc.Len()-1] != "zoo" {
-		t.Fatal("Expected 'zoo' in final position of sorted list.")
-	}
+	verifySort(strSlc, count, t)
 }
-*/
 
-func TestMergeSort(t *testing.T) {
-	strSlc, err := loadUnsortedFile("../data/words3.txt")
-	if err != nil {
-		t.Fatal("Unable to load file: ", err)
-	}
-	aux := make(sorting.StringSlice, strSlc.Len())
+func TestMergeSortTopDown(t *testing.T) {
+	strSlc, count := createSortingSlice("../data/words3.txt", t)
+	// Make an aux copy of the string slice, so we can use it to
+	// temporarily store values as we merge
+	aux := make(sorting.StringSlice, count)
 
-	fmt.Println(strSlc)
-	sorting.MergeSortTopDown(strSlc, aux, 0, strSlc.Len()-1)
-	fmt.Println(strSlc)
+	sorting.MergeSortTopDown(strSlc, aux, 0, count-1)
+	verifySorting(strSlc, count, t)
+}
 
+func TestMergeSortBottomUp(t *testing.T) {
+	strSlc, count := createSortingSlice("../data/words3.txt", t)
+	// Make an aux copy of the string slice, so we can use it to
+	// temporarily store values as we merge
+	aux := make(sorting.StringSlice, count)
+
+	sorting.MergeSortTopDown(strSlc, aux, 0, count-1)
+	verifySorting(strSlc, count, t)
+}
+
+func TestQuicksort(t *testing.T) {
+	strSlc, count := createSortSlice("../data/words3.txt", t)
+
+	sorting.Quicksort(strSlc)
+
+	verifySort(strSlc, count, t)
 }
