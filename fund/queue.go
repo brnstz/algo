@@ -4,7 +4,7 @@ import (
 	"errors"
 )
 
-var Empty = errors.New("queue is empty")
+var EmptyQueue = errors.New("queue is empty")
 
 // A FIFO queue implementation using an auto-resizing array
 type Queue struct {
@@ -63,7 +63,7 @@ func (q *Queue) Dequeue() (interface{}, error) {
 
 	// If queue is empty, return error
 	if q.IsEmpty() {
-		return nil, Empty
+		return nil, EmptyQueue
 	}
 
 	// Get the current item at the dequeue index

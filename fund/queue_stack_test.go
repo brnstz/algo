@@ -86,3 +86,38 @@ func TestQueue(t *testing.T) {
 		t.Fatalf("Expected queue with size 0, but got size: %v", size)
 	}
 }
+
+func TestStack(t *testing.T) {
+	s := fund.NewStack()
+
+	loadIt(s, "../data/numdash.txt", t)
+
+	// Check the expected value of size
+	size := s.Size()
+	if size != 30714 {
+		t.Fatalf("Expected size 30714 but got %v", size)
+	}
+
+	// Check expected value on top of stack
+	peek := s.Peek()
+	if peek != 318299769 {
+		t.Fatalf("Expected 318299769 on top of queue, but got: %v", peek)
+	}
+
+	// Exhuastively pop all values off stack
+	for !s.IsEmpty() {
+		s.Pop()
+	}
+
+	// We should get a nil and error value here
+	beNil, popErr := s.Pop()
+	if beNil != nil || popErr != fund.EmptyStack {
+		t.Fatalf("Expected nil and empty stack error, got %v and %v", beNil, popErr)
+	}
+
+	// We should get size 0 here
+	size = s.Size()
+	if size != 0 {
+		t.Fatalf("Expected queue with size 0, but got size: %v", size)
+	}
+}
