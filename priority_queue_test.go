@@ -1,7 +1,7 @@
-package fund_test
+package algo_test
 
 import (
-	"algo/fund"
+	"algo"
 
 	"math"
 	"math/rand"
@@ -11,7 +11,7 @@ import (
 
 type PQInt int
 
-func (self PQInt) PQLess(otherItem fund.PQItem) bool {
+func (self PQInt) PQLess(otherItem algo.PQItem) bool {
 	other := otherItem.(PQInt)
 	return self < other
 }
@@ -22,7 +22,7 @@ func TestPriorityQueueInsertDelete(t *testing.T) {
 
 	numVals := 100000
 
-	pq := fund.NewPriorityQueue(numVals)
+	pq := algo.NewPriorityQueue(numVals)
 
 	var val, lastVal PQInt
 	for i := 0; i < numVals; i++ {
@@ -56,7 +56,7 @@ type JukeboxSong struct {
 
 // A lower integer value of priority is of higher importance, so use
 // > here.
-func (self *JukeboxSong) PQLess(otherPQ fund.PQItem) bool {
+func (self *JukeboxSong) PQLess(otherPQ algo.PQItem) bool {
 	other := otherPQ.(*JukeboxSong)
 
 	return self.priority > other.priority
@@ -71,7 +71,7 @@ func TestPriorityQueueOther(t *testing.T) {
 	item5 := &JukeboxSong{"Welcome to the Jungle", 30}
 	item6 := &JukeboxSong{"Highway to Hell", 800}
 
-	pq := fund.NewPriorityQueue(5)
+	pq := algo.NewPriorityQueue(5)
 	pq.Insert(item1)
 	pq.Insert(item2)
 	pq.Insert(item3)
@@ -79,7 +79,7 @@ func TestPriorityQueueOther(t *testing.T) {
 	pq.Insert(item5)
 
 	err := pq.Insert(item6)
-	if err != fund.PQFull {
+	if err != algo.PQFull {
 		t.Fatal("Expected full queue")
 	}
 

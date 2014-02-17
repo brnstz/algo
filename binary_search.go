@@ -1,4 +1,4 @@
-package fund
+package algo
 
 // Create an interface, steal ideas from part of core sort package.
 type SearchSlice interface {
@@ -14,7 +14,7 @@ type SearchSlice interface {
 
 // Return the index of of item in the sorted slice values. If item
 // doesn't exist, return -1.
-func Find(item interface{}, values SearchSlice) int {
+func BinarySearch(item interface{}, values SearchSlice) int {
 	low := 0
 	mid := 0
 	top := values.Len() - 1

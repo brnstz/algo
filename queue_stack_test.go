@@ -1,7 +1,7 @@
-package fund_test
+package algo_test
 
 import (
-	"algo/fund"
+	"algo"
 
 	"fmt"
 	"io"
@@ -59,9 +59,9 @@ func loadIt(ad AddDel, file string, t *testing.T) {
 }
 
 func TestQueue(t *testing.T) {
-	q := fund.NewQueue()
+	q := algo.NewQueue()
 
-	loadIt(q, "../data/numdash.txt", t)
+	loadIt(q, "data/numdash.txt", t)
 
 	// Check the expected value of size
 	size := q.Size()
@@ -88,9 +88,9 @@ func TestQueue(t *testing.T) {
 }
 
 func TestStack(t *testing.T) {
-	s := fund.NewStack()
+	s := algo.NewStack()
 
-	loadIt(s, "../data/numdash.txt", t)
+	loadIt(s, "data/numdash.txt", t)
 
 	// Check the expected value of size
 	size := s.Size()
@@ -111,7 +111,7 @@ func TestStack(t *testing.T) {
 
 	// We should get a nil and error value here
 	beNil, popErr := s.Pop()
-	if beNil != nil || popErr != fund.EmptyStack {
+	if beNil != nil || popErr != algo.EmptyStack {
 		t.Fatalf("Expected nil and empty stack error, got %v and %v", beNil, popErr)
 	}
 

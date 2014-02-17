@@ -1,7 +1,7 @@
-package sorting_test
+package algo_test
 
 import (
-	"algo/sorting"
+	"algo"
 
 	"fmt"
 	"io"
@@ -11,9 +11,9 @@ import (
 )
 
 // Load unsorted data from filename. Return a sort.StringSlice. This can be
-// converted to sorting.StringSlice (supports CopyAux()) for mergesort.
+// converted to algo.StringSlice (supports CopyAux()) for mergesort.
 func createSortSlice(filename string, t *testing.T) (sort.StringSlice, int) {
-	// Create an empty slice of strings, using interface from the sorting
+	// Create an empty slice of strings, using interface from the algo
 	// package
 	strSlc := sort.StringSlice{}
 
@@ -45,11 +45,11 @@ func createSortSlice(filename string, t *testing.T) (sort.StringSlice, int) {
 	return strSlc, count
 }
 
-// Create a slice with the sorting.StringSlice interface by converting a
+// Create a slice with the algo.StringSlice interface by converting a
 // sort.StringSlice
-func createSortingSlice(filename string, t *testing.T) (sorting.StringSlice, int) {
+func createSortingSlice(filename string, t *testing.T) (algo.StringSlice, int) {
 	sortSlice, count := createSortSlice(filename, t)
-	sortingSlice := make(sorting.StringSlice, count)
+	sortingSlice := make(algo.StringSlice, count)
 
 	for i, val := range sortSlice {
 		sortingSlice[i] = val
@@ -68,8 +68,8 @@ func verifySort(strSlc sort.StringSlice, count int, t *testing.T) {
 	}
 }
 
-// Verify a sorting.StringSlice by checking each successive value is >=
-func verifySorting(strSlc sorting.StringSlice, count int, t *testing.T) {
+// Verify a algo.StringSlice by checking each successive value is >=
+func verifySorting(strSlc algo.StringSlice, count int, t *testing.T) {
 	// Check that list sort has suceeded
 	for i := 0; i < count-1; i++ {
 		if strSlc.Less(i+1, i) {
@@ -78,37 +78,37 @@ func verifySorting(strSlc sorting.StringSlice, count int, t *testing.T) {
 	}
 }
 func TestInsertionSort(t *testing.T) {
-	strSlc, count := createSortSlice("../data/words3.txt", t)
+	strSlc, count := createSortSlice("data/words3.txt", t)
 
-	sorting.InsertionSort(strSlc)
+	algo.InsertionSort(strSlc)
 
 	verifySort(strSlc, count, t)
 }
 
 func TestMergeSortTopDown(t *testing.T) {
-	strSlc, count := createSortingSlice("../data/words3.txt", t)
+	strSlc, count := createSortingSlice("data/words3.txt", t)
 	// Make an aux copy of the string slice, so we can use it to
 	// temporarily store values as we merge
-	aux := make(sorting.StringSlice, count)
+	aux := make(algo.StringSlice, count)
 
-	sorting.MergeSortTopDown(strSlc, aux, 0, count-1)
+	algo.MergeSortTopDown(strSlc, aux, 0, count-1)
 	verifySorting(strSlc, count, t)
 }
 
 func TestMergeSortBottomUp(t *testing.T) {
-	strSlc, count := createSortingSlice("../data/words3.txt", t)
+	strSlc, count := createSortingSlice("data/words3.txt", t)
 	// Make an aux copy of the string slice, so we can use it to
 	// temporarily store values as we merge
-	aux := make(sorting.StringSlice, count)
+	aux := make(algo.StringSlice, count)
 
-	sorting.MergeSortTopDown(strSlc, aux, 0, count-1)
+	algo.MergeSortTopDown(strSlc, aux, 0, count-1)
 	verifySorting(strSlc, count, t)
 }
 
 func TestQuicksort(t *testing.T) {
-	strSlc, count := createSortSlice("../data/words3.txt", t)
+	strSlc, count := createSortSlice("data/words3.txt", t)
 
-	sorting.Quicksort(strSlc)
+	algo.Quicksort(strSlc)
 
 	verifySort(strSlc, count, t)
 }

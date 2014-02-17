@@ -1,7 +1,7 @@
-package fund_test
+package algo_test
 
 import (
-	"algo/fund"
+	"algo"
 
 	"fmt"
 	"io"
@@ -29,11 +29,11 @@ func (values IntSlice) Len() int {
 func TestBinarySearch(t *testing.T) {
 	values := IntSlice{5, 100, 3422, 9000, 53535}
 
-	if fund.Find(100, values) != 1 {
+	if algo.BinarySearch(100, values) != 1 {
 		t.Fatal("Expected to find 100 in index 1 of binary search")
 	}
 
-	if fund.Find(50, values) != -1 {
+	if algo.BinarySearch(50, values) != -1 {
 		t.Fatal("Expected to not find 50.")
 	}
 }
@@ -43,7 +43,7 @@ type IntExpectIndex struct {
 }
 
 func TestBinarySearchViaFile(t *testing.T) {
-	fh, err := os.Open("../data/sorted-ints.txt")
+	fh, err := os.Open("data/sorted-ints.txt")
 
 	if err != nil {
 		t.Fatal(err)
@@ -94,7 +94,7 @@ func TestBinarySearchViaFile(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		actualIndex := fund.Find(test.Val, values)
+		actualIndex := algo.BinarySearch(test.Val, values)
 		if test.Index != actualIndex {
 			t.Fatalf("Could not find %v at %v, actual index: %v",
 				test.Val, test.Index, actualIndex,

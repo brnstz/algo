@@ -1,4 +1,4 @@
-package sorting
+package algo
 
 import (
 	// Import the core sort package to use its interface, which declares

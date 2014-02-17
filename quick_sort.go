@@ -1,4 +1,4 @@
-package sorting
+package algo
 
 import (
 	"math/rand"
