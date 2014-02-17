@@ -26,11 +26,15 @@ type PQItem interface {
 	// Compare the receiver of the method call to item passed in args. The
 	// implementing function should use type assertion to convert the passed
 	// in item. Return true if receiver should be considered a lower
-	// priority than the argument, false otherwise.
+	// priority than the argument, false otherwise. How you implement
+	// this for your item determines whether the priority queue is a
+	// "min queue" or a "max queue".
 	PQLess(PQItem) bool
 }
 
 var NotFound = errors.New("item not found in priority queue")
+var PQEmpty = errors.New("priority queue is empty")
+var PQFull = errors.New("priority queue is full")
 
 // Create a new priority queue with max size of maxN
 func NewPriorityQueue(maxN int) *PriorityQueue {
@@ -42,8 +46,14 @@ func NewPriorityQueue(maxN int) *PriorityQueue {
 }
 
 // What is the index value of this item?
-func (pq *PriorityQueue) IndexOf(key PQItem) int {
-	return pq.revMap[key]
+func (pq *PriorityQueue) IndexOf(key PQItem) (int, error) {
+	val, ok := pq.revMap[key]
+
+	if !ok {
+		return -1, NotFound
+	}
+
+	return val, nil
 }
 
 // Do we contain this item?
@@ -61,8 +71,12 @@ func (pq *PriorityQueue) IndicateChange(i int) {
 }
 
 // Insert a new value into our priority queue
-func (pq *PriorityQueue) Insert(key PQItem) {
-	// Increment the total number of items in the pq
+func (pq *PriorityQueue) Insert(key PQItem) error {
+
+	if pq.n >= pq.maxN {
+		return PQFull
+	}
+
 	pq.n++
 
 	// Start by storing the item at the end of our data array
@@ -71,21 +85,53 @@ func (pq *PriorityQueue) Insert(key PQItem) {
 
 	// Restore heap order by swimming up to place it in the correct location
 	pq.swim(pq.n)
+
+	return nil
 }
 
 // Delete this item from the priority queue. Returns NotFound if item
 // is not currently in the queue.
-/*
-FIXME
 func (pq *PriorityQueue) Delete(key PQItem) error {
-	i := pq.IndexOf(key)
 
+	// Get the index or return an error
+	i, err := pq.IndexOf(key)
+	if err != nil {
+		return err
+	}
 
+	// Swap this value with the last value
+	pq.swap(i, pq.n)
+
+	// Remove from reverse map
+	delete(pq.revMap, pq.data[pq.n])
+
+	// Delete the swapped value
+	pq.data[pq.n] = nil
+
+	// Decrement our total count of objects
+	pq.n--
+
+	// Generally, we want to restore heap property from i, but it's possible i
+	// was the last index. Get the min of i and pq.n.
+	if i > pq.n {
+		i = pq.n
+	}
+
+	// Restore heap property if we still have any values
+	if i > 0 {
+		pq.swim(i)
+		pq.sink(i)
+	}
+
+	return nil
 }
-*/
 
 // Delete the highest priority item in our queue
-func (pq *PriorityQueue) DelMax() PQItem {
+func (pq *PriorityQueue) DelMax() (PQItem, error) {
+	if pq.n < 1 {
+		return nil, PQEmpty
+	}
+
 	// The max item is index 1, get it
 	max := pq.data[1]
 
@@ -104,7 +150,7 @@ func (pq *PriorityQueue) DelMax() PQItem {
 	// Restore heap order
 	pq.sink(1)
 
-	return max
+	return max, nil
 }
 
 // Starting from k, "swim" higher priority values up toward index 1. This
@@ -176,26 +222,7 @@ func (pq *PriorityQueue) MaxSize() int {
 	return pq.maxN
 }
 
-/*
-func (pq *PQIndex) N() int {
+// What is the current number of items in the priority queue?
+func (pq *PriorityQueue) Size() int {
 	return pq.n
 }
-*/
-
-/*
-FIXME this is not correct, and it should use i int for indexes, otherwise
-the map comparison will not work.
-func (pq *PQIndex) Delete(key PQItem) {
-	i := pq.IndexOf(key)
-
-	// Swap our deleted index with the last value
-	pq.n--
-
-	pq.swap(i, pq.n)
-
-	pq[pq.n] = nil
-
-	pq.swim(i)
-	pq.sink(i)
-}
-*/
