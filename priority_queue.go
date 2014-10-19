@@ -7,7 +7,7 @@ import (
 // A priority queue that can hold any set of items that implements
 // the PQItem interface
 type PriorityQueue struct {
-	// Our internal store of data. To make math earsier, we start
+	// Our internal store of data. To make math easier, we start
 	// storing data in data[1]. data[0] is unused.
 	data []PQItem
 
