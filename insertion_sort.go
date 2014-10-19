@@ -7,7 +7,7 @@ import (
 )
 
 func InsertionSort(a sort.Interface) {
-	// Store the length of the incoming list to be sorteda
+	// Store the length of the incoming list to be sorted
 	aLen := a.Len()
 
 	// Declare two index variables
