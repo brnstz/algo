@@ -95,13 +95,11 @@ func (t *RedBlackTree) put(n *Node, v NodeValue) *Node {
 	}
 
 	// There might be two reds in a row. Red violation. Rotate right to fix.
-	//if n.Left != nil && n.Left.Color == red && n.Left.Left != nil && n.Left.Left.Color == red {
 	if n.Left.isRed() && n.Left.Left.isRed() {
 		n = t.rotateRight(n)
 	}
 
 	// Both links here might be red. Another red violation. Flip colors to fix.
-	//if n.Left != nil && n.Left.Color == red && n.Right != nil && n.Right.Color == red {
 	if n.Left.isRed() && n.Right.isRed() {
 		t.flipColors(n)
 	}
