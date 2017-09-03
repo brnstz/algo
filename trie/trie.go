@@ -2,11 +2,30 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"io"
 	"log"
+	"net/http"
 	"os"
 	"strings"
 )
+
+const MAX_COMPLETIONS = 10
+
+// Stolen from https://gist.github.com/moraes/2141121#gistcomment-1361598
+type Queue []*Trie
+
+func (q *Queue) Push(t *Trie) {
+	*q = append(*q, t)
+}
+
+func (q *Queue) Pop() *Trie {
+	t := (*q)[0]
+
+	*q = (*q)[1:]
+
+	return t
+}
 
 // Trie is a node in our Trie structure
 type Trie struct {
@@ -101,7 +120,7 @@ func (t *Trie) Add(word string) {
 
 // Exists returns a boolean indicating whether this word exists or not in our
 // trie.
-func (t *Trie) Exists(word string) bool {
+func (t *Trie) Exists(word string) (bool, *Trie) {
 	node := t
 
 	for _, letter := range word {
@@ -110,12 +129,87 @@ func (t *Trie) Exists(word string) bool {
 		// doesn't exist
 		node = node.FindChild(letter)
 		if node == nil {
-			return false
+			return false, nil
 		}
 	}
 
 	// If the final letter isn't a leaf node, then it isn't a word
-	return node.Leaf
+	return node.Leaf, node
+}
+
+/*
+func (t *Trie) findCompletionsAux(word string, max int) []string {
+	node := t.FirstChild
+	completions := []string{}
+
+	// Do a breadth first search trying to find leaf nodes
+	for child != nil {
+		if child.Leaf {
+			completions = append(completions, word+string(child.Letter))
+		}
+
+		if len(completions) >= max {
+			return completions
+		}
+	}
+
+	return completions
+}
+*/
+
+func (t *Trie) FindCompletions(word string, max int) []string {
+	var node *Trie
+	var q Queue
+
+	completions := []string{}
+	node = t.FirstChild
+
+	// Initialize q with root's children
+	for node != nil {
+		q.Push(node)
+
+		node = node.NextSibling
+	}
+
+	for len(q) > 0 {
+		node = q.Pop()
+
+	}
+
+	for node != nil {
+		completions = node.findCompletions(word, max-len(completions))
+
+		if len(completions) >= max {
+			return completions
+		}
+
+	}
+
+	return completions
+}
+
+type wordResponse struct {
+	Exists      bool     `json:"exists"`
+	Completions []string `json:"completions"`
+}
+
+func getWord(t *Trie, w http.ResponseWriter, r *http.Request) {
+	var node *Trie
+
+	response := wordResponse{}
+	word := r.FormValue("word")
+
+	response.Exists, node = t.Exists(word)
+	response.Completions = node.FindCompletions(word, MAX_COMPLETIONS)
+
+	b, err := json.Marshal(response)
+	if err != nil {
+		log.Println("can't marshal to json", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(b)
 }
 
 func main() {
@@ -141,6 +235,17 @@ func main() {
 		if i > 0 && i%1000000 == 0 {
 			log.Printf("loaded %v lines", i)
 		}
+
+		if i >= 50000 {
+			break
+		}
 	}
 	log.Printf("loading complete, %v lines\n", i)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/word", func(w http.ResponseWriter, r *http.Request) {
+		getWord(trie, w, r)
+	})
+
+	log.Fatal(http.ListenAndServe(":53172", mux))
 }
