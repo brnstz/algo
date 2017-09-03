@@ -5,17 +5,22 @@ import (
 	"io"
 	"log"
 	"os"
-	"runtime/pprof"
 	"strings"
-	"time"
 )
 
+// Trie is a node in our Trie structure
 type Trie struct {
+	// The letter this Trie represents
 	Letter rune
-	Leaf   bool
 
+	// Is this node the end of a word?
+	Leaf bool
+
+	// A pointer to the next sibling of this node
 	NextSibling *Trie
 
+	// The head and tail of a linked list of children one level below
+	// this node
 	FirstChild *Trie
 	LastChild  *Trie
 }
@@ -27,33 +32,43 @@ func NewTrie(letter rune) *Trie {
 	return t
 }
 
-func (t *Trie) FindChild(runeValue rune) *Trie {
+// FindChild finds a trie node for this rune at one level below t or returns
+// nil
+func (t *Trie) FindChild(letter rune) *Trie {
 	child := t.FirstChild
 
+	// Check all siblings for this letter
 	for child != nil {
-		if child.Letter == runeValue {
+		if child.Letter == letter {
 			return child
 		}
 
 		child = child.NextSibling
 	}
 
+	// Nope, couldn't find it
 	return nil
 }
 
-func (t *Trie) EnsureChild(runeValue rune) *Trie {
-	child := t.FindChild(runeValue)
+// EnsureChild ensures that a trie node for this letter exists at one level
+// below t
+func (t *Trie) EnsureChild(letter rune) *Trie {
 
+	// Can we find the child already?
+	child := t.FindChild(letter)
+
+	// If not, create a node and append it to the children list
 	if child == nil {
-		child = NewTrie(runeValue)
-
-		// Two possibilities
+		child = NewTrie(letter)
 
 		if t.FirstChild == nil {
-			// It's the first entry
+
+			// It's the first entry, we need to set head and tail
 			t.FirstChild = child
 			t.LastChild = child
+
 		} else {
+
 			// It's not the first entry
 			t.LastChild.NextSibling = child
 			t.LastChild = child
@@ -69,32 +84,34 @@ func (t *Trie) Add(word string) {
 
 	// Start with our root trie
 	node := t
-	lastNode := t
+	// lastNode := t
 
 	// For every letter in the word, ensure a trie
 	// node exists.
-	for _, runeValue := range word {
+	for _, letter := range word {
 
-		child = node.EnsureChild(runeValue)
+		child = node.EnsureChild(letter)
 
 		// Run down the tree to the next node and add the next letter
 		node = child
-		lastNode = node
+		// lastNode = node
 	}
 
 	// Setting as a leaf node indicates this is node is a word.
-	lastNode.Leaf = true
+	node.Leaf = true
+	// lastNode.Leaf = true
 }
 
-// Does this word exist?
+// Exists returns a boolean indicating whether this word exists or not in our
+// trie.
 func (t *Trie) Exists(word string) bool {
 	node := t
 
-	for _, runeValue := range word {
-		node = node.FindChild(runeValue)
+	for _, letter := range word {
 
 		// If at any point we don't have a child, then this word
 		// doesn't exist
+		node = node.FindChild(letter)
 		if node == nil {
 			return false
 		}
@@ -105,21 +122,11 @@ func (t *Trie) Exists(word string) bool {
 }
 
 func main() {
+	i := 0
 	r := bufio.NewReader(os.Stdin)
 	trie := NewTrie(0)
 
-	/*
-		go func() {
-			log.Println(http.ListenAndServe("localhost:6060", nil))
-		}()
-	*/
-
-	f, err := os.Create("memprofile.out")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for i := 0; ; i++ {
+	for ; ; i++ {
 		text, err := r.ReadString('\n')
 		if err == io.EOF {
 			break
@@ -134,21 +141,9 @@ func main() {
 
 		trie.Add(title)
 
-		if i%1000000 == 0 {
-			log.Println(i)
-			t1 := time.Now()
-			found := trie.Exists("Americans with Disabilities Act of 1990/Findings and Purposes")
-			t2 := time.Now()
-			log.Printf("%v %v\n", found, t2.Sub(t1))
+		if i > 0 && i%1000000 == 0 {
+			log.Printf("loaded %v lines", i)
 		}
-
-		/*
-			if i > 5000000 {
-				break
-			}
-		*/
 	}
-
-	pprof.WriteHeapProfile(f)
-	f.Close()
+	log.Printf("loading complete, %v lines\n", i)
 }
