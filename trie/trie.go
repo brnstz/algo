@@ -84,7 +84,6 @@ func (t *Trie) Add(word string) {
 
 	// Start with our root trie
 	node := t
-	// lastNode := t
 
 	// For every letter in the word, ensure a trie
 	// node exists.
@@ -94,12 +93,10 @@ func (t *Trie) Add(word string) {
 
 		// Run down the tree to the next node and add the next letter
 		node = child
-		// lastNode = node
 	}
 
 	// Setting as a leaf node indicates this is node is a word.
 	node.Leaf = true
-	// lastNode.Leaf = true
 }
 
 // Exists returns a boolean indicating whether this word exists or not in our
