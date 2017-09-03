@@ -2,59 +2,62 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"io"
 	"log"
 	"os"
 	"runtime/pprof"
 	"strings"
 	"time"
-	"unsafe"
 )
 
-var letters = 0
-var trieCalls = 0
-var maxChildren = 0
-var maxChildrenNode *Trie
-
 type Trie struct {
-	Letter   rune
-	Children []*Trie
-	Leaf     bool
+	Letter rune
+	Leaf   bool
+
+	NextSibling *Trie
+
+	FirstChild *Trie
+	LastChild  *Trie
 }
 
 // NewTrie creates a new trie node. Use 0 as the letter for the root node.
 func NewTrie(letter rune) *Trie {
-	t := &Trie{
-		Letter:   letter,
-		Children: make([]*Trie, 0, 1),
-	}
-
-	trieCalls += 1
+	t := &Trie{Letter: letter}
 
 	return t
 }
 
 func (t *Trie) FindChild(runeValue rune) *Trie {
-	for _, trie := range t.Children {
-		if trie.Letter == runeValue {
-			return trie
+	child := t.FirstChild
+
+	for child != nil {
+		if child.Letter == runeValue {
+			return child
 		}
+
+		child = child.NextSibling
 	}
 
 	return nil
 }
 
 func (t *Trie) EnsureChild(runeValue rune) *Trie {
-	var (
-		child *Trie
-	)
+	child := t.FindChild(runeValue)
 
-	// If the child exists, use it, otherwise create it
-	child = t.FindChild(runeValue)
 	if child == nil {
 		child = NewTrie(runeValue)
-		t.Children = append(t.Children, child)
+
+		// Two possibilities
+
+		if t.FirstChild == nil {
+			// It's the first entry
+			t.FirstChild = child
+			t.LastChild = child
+		} else {
+			// It's not the first entry
+			t.LastChild.NextSibling = child
+			t.LastChild = child
+		}
 	}
 
 	return child
@@ -71,7 +74,6 @@ func (t *Trie) Add(word string) {
 	// For every letter in the word, ensure a trie
 	// node exists.
 	for _, runeValue := range word {
-		letters += 1
 
 		child = node.EnsureChild(runeValue)
 
@@ -102,37 +104,9 @@ func (t *Trie) Exists(word string) bool {
 	return node.Leaf
 }
 
-func (t *Trie) countNodes() (int, int) {
-	var fullNodes, emptyNodes int
-
-	if t.Children != nil {
-		fullNodes = 1
-	} else {
-		emptyNodes = 1
-	}
-
-	if len(t.Children) > maxChildren && t.Letter != 0 {
-		maxChildren = len(t.Children)
-		maxChildrenNode = t
-	}
-
-	for _, v := range t.Children {
-		nowFull, nowEmpty := v.countNodes()
-
-		fullNodes += nowFull
-		emptyNodes += nowEmpty
-	}
-
-	return fullNodes, emptyNodes
-}
-
 func main() {
 	r := bufio.NewReader(os.Stdin)
 	trie := NewTrie(0)
-	fmt.Printf("sizeof: Letter: %v\n", unsafe.Sizeof(trie.Letter))
-	fmt.Printf("sizeof: Children: %v\n", unsafe.Sizeof(trie.Children))
-	fmt.Printf("sizeof: Leaf: %v\n", unsafe.Sizeof(trie.Leaf))
-	fmt.Printf("sizeof: Overall: %v\n", unsafe.Sizeof(*trie))
 
 	/*
 		go func() {
@@ -174,15 +148,6 @@ func main() {
 			}
 		*/
 	}
-
-	full, empty := trie.countNodes()
-
-	fmt.Printf("letters: %v\n", letters)
-	fmt.Printf("full nodes: %v\n", full)
-	fmt.Printf("empty nodes: %v\n", empty)
-	fmt.Printf("trie calls: %v\n", trieCalls)
-	fmt.Printf("max children: %v\n", maxChildren)
-	fmt.Printf("max children nodes: %v\n", maxChildrenNode)
 
 	pprof.WriteHeapProfile(f)
 	f.Close()
