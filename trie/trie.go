@@ -9,6 +9,7 @@ import (
 	"runtime/pprof"
 	"strings"
 	"time"
+	"unsafe"
 )
 
 var letters = 0
@@ -18,40 +19,42 @@ var maxChildrenNode *Trie
 
 type Trie struct {
 	Letter   rune
-	Children map[rune]*Trie
+	Children []*Trie
 	Leaf     bool
 }
 
 // NewTrie creates a new trie node. Use 0 as the letter for the root node.
 func NewTrie(letter rune) *Trie {
-	t := &Trie{}
-	t.Letter = letter
+	t := &Trie{
+		Letter:   letter,
+		Children: make([]*Trie, 0, 1),
+	}
 
 	trieCalls += 1
 
 	return t
 }
 
+func (t *Trie) FindChild(runeValue rune) *Trie {
+	for _, trie := range t.Children {
+		if trie.Letter == runeValue {
+			return trie
+		}
+	}
+
+	return nil
+}
+
 func (t *Trie) EnsureChild(runeValue rune) *Trie {
 	var (
-		child  *Trie
-		exists bool
+		child *Trie
 	)
 
-	if t.Children == nil {
-		// If there's no map, then there's definitely no child
-		t.Children = map[rune]*Trie{}
+	// If the child exists, use it, otherwise create it
+	child = t.FindChild(runeValue)
+	if child == nil {
 		child = NewTrie(runeValue)
-		t.Children[runeValue] = child
-
-	} else {
-
-		// If the child exists, use it, otherwise create it
-		child, exists = t.Children[runeValue]
-		if !exists {
-			child = NewTrie(runeValue)
-			t.Children[runeValue] = child
-		}
+		t.Children = append(t.Children, child)
 	}
 
 	return child
@@ -83,15 +86,14 @@ func (t *Trie) Add(word string) {
 
 // Does this word exist?
 func (t *Trie) Exists(word string) bool {
-	var exists bool
 	node := t
 
 	for _, runeValue := range word {
-		node, exists = node.Children[runeValue]
+		node = node.FindChild(runeValue)
 
 		// If at any point we don't have a child, then this word
 		// doesn't exist
-		if !exists {
+		if node == nil {
 			return false
 		}
 	}
@@ -127,6 +129,10 @@ func (t *Trie) countNodes() (int, int) {
 func main() {
 	r := bufio.NewReader(os.Stdin)
 	trie := NewTrie(0)
+	fmt.Printf("sizeof: Letter: %v\n", unsafe.Sizeof(trie.Letter))
+	fmt.Printf("sizeof: Children: %v\n", unsafe.Sizeof(trie.Children))
+	fmt.Printf("sizeof: Leaf: %v\n", unsafe.Sizeof(trie.Leaf))
+	fmt.Printf("sizeof: Overall: %v\n", unsafe.Sizeof(*trie))
 
 	/*
 		go func() {
@@ -162,9 +168,11 @@ func main() {
 			log.Printf("%v %v\n", found, t2.Sub(t1))
 		}
 
-		if i > 5000000 {
-			break
-		}
+		/*
+			if i > 5000000 {
+				break
+			}
+		*/
 	}
 
 	full, empty := trie.countNodes()
