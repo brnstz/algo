@@ -12,21 +12,6 @@ import (
 
 const MAX_COMPLETIONS = 10
 
-// Stolen from https://gist.github.com/moraes/2141121#gistcomment-1361598
-type Queue []*Trie
-
-func (q *Queue) Push(t *Trie) {
-	*q = append(*q, t)
-}
-
-func (q *Queue) Pop() *Trie {
-	t := (*q)[0]
-
-	*q = (*q)[1:]
-
-	return t
-}
-
 // Trie is a node in our Trie structure
 type Trie struct {
 	// The letter this Trie represents
@@ -137,52 +122,64 @@ func (t *Trie) Exists(word string) (bool, *Trie) {
 	return node.Leaf, node
 }
 
-/*
-func (t *Trie) findCompletionsAux(word string, max int) []string {
-	node := t.FirstChild
-	completions := []string{}
-
-	// Do a breadth first search trying to find leaf nodes
-	for child != nil {
-		if child.Leaf {
-			completions = append(completions, word+string(child.Letter))
-		}
-
-		if len(completions) >= max {
-			return completions
-		}
-	}
-
-	return completions
+// trieWord is a Trie node and the word up until that node. Eg, if we were
+// storing "goodbye", the word might be "goodb" and the trie node might be
+// the letter "y". This allows us to use a queue to run a breadth first
+// search in FindCompletions
+type trieWord struct {
+	word string
+	trie *Trie
 }
-*/
+
+// Stolen from https://gist.github.com/moraes/2141121#gistcomment-1361598
+type queue []trieWord
+
+func (q *queue) Push(t trieWord) {
+	*q = append(*q, t)
+}
+
+func (q *queue) Pop() trieWord {
+	t := (*q)[0]
+	*q = (*q)[1:]
+	return t
+}
 
 func (t *Trie) FindCompletions(word string, max int) []string {
-	var node *Trie
-	var q Queue
+	var child *Trie
+	var tw trieWord
+	var q queue
 
 	completions := []string{}
-	node = t.FirstChild
 
-	// Initialize q with root's children
-	for node != nil {
-		q.Push(node)
+	// Initialize q with ourselves
+	q.Push(trieWord{word: word, trie: t})
 
-		node = node.NextSibling
-	}
-
+	// While we still have stuff in our queue
 	for len(q) > 0 {
-		node = q.Pop()
 
-	}
+		// Get the word and trie node off the queue
+		tw = q.Pop()
+		log.Printf("tw: %v\n", tw)
 
-	for node != nil {
-		completions = node.findCompletions(word, max-len(completions))
+		// Check for children that complete a word
+		child = tw.trie.FirstChild
+		for child != nil {
+			childWord := word + string(child.Letter)
 
-		if len(completions) >= max {
-			return completions
+			// If it's a word, add it to our words
+			if child.Leaf {
+				completions = append(completions, childWord)
+			}
+
+			// If we have enough words, then stop
+			if len(completions) >= max {
+				return completions
+			}
+
+			// Add child to queue to process its children
+			q.Push(trieWord{word: childWord, trie: child})
+
 		}
-
 	}
 
 	return completions
@@ -200,7 +197,9 @@ func getWord(t *Trie, w http.ResponseWriter, r *http.Request) {
 	word := r.FormValue("word")
 
 	response.Exists, node = t.Exists(word)
-	response.Completions = node.FindCompletions(word, MAX_COMPLETIONS)
+	if node != nil {
+		response.Completions = node.FindCompletions(word, MAX_COMPLETIONS)
+	}
 
 	b, err := json.Marshal(response)
 	if err != nil {
