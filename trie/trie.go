@@ -144,6 +144,8 @@ func (q *queue) Pop() trieWord {
 	return t
 }
 
+// FindCompletions does a breadth-first search below this trie node, and
+// finds up to max completed words under it.
 func (t *Trie) FindCompletions(word string, max int) []string {
 	var child *Trie
 	var tw trieWord
@@ -159,12 +161,11 @@ func (t *Trie) FindCompletions(word string, max int) []string {
 
 		// Get the word and trie node off the queue
 		tw = q.Pop()
-		log.Printf("tw: %v\n", tw)
 
 		// Check for children that complete a word
 		child = tw.trie.FirstChild
 		for child != nil {
-			childWord := word + string(child.Letter)
+			childWord := tw.word + string(child.Letter)
 
 			// If it's a word, add it to our words
 			if child.Leaf {
@@ -179,6 +180,7 @@ func (t *Trie) FindCompletions(word string, max int) []string {
 			// Add child to queue to process its children
 			q.Push(trieWord{word: childWord, trie: child})
 
+			child = child.NextSibling
 		}
 	}
 
@@ -233,10 +235,6 @@ func main() {
 
 		if i > 0 && i%1000000 == 0 {
 			log.Printf("loaded %v lines", i)
-		}
-
-		if i >= 50000 {
-			break
 		}
 	}
 	log.Printf("loading complete, %v lines\n", i)
