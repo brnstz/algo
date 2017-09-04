@@ -1,16 +1,4 @@
-package main
-
-import (
-	"bufio"
-	"encoding/json"
-	"io"
-	"log"
-	"net/http"
-	"os"
-	"strings"
-)
-
-const MAX_COMPLETIONS = 100
+package algo
 
 // Trie is a node in our Trie structure
 type Trie struct {
@@ -185,66 +173,4 @@ func (t *Trie) FindCompletions(word string, max int) []string {
 	}
 
 	return completions
-}
-
-type wordResponse struct {
-	Exists      bool     `json:"exists"`
-	Completions []string `json:"completions"`
-}
-
-func getWord(t *Trie, w http.ResponseWriter, r *http.Request) {
-	var node *Trie
-
-	response := wordResponse{}
-	word := r.FormValue("word")
-
-	response.Exists, node = t.Exists(word)
-	if node != nil && node.Letter != 0 {
-		response.Completions = node.FindCompletions(word, MAX_COMPLETIONS)
-	}
-
-	b, err := json.Marshal(response)
-	if err != nil {
-		log.Println("can't marshal to json", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	w.Write(b)
-}
-
-func main() {
-	i := 0
-	r := bufio.NewReader(os.Stdin)
-	trie := NewTrie(0)
-
-	for ; ; i++ {
-		text, err := r.ReadString('\n')
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			log.Fatal(err)
-		}
-		text = strings.TrimSpace(text)
-
-		strings := strings.SplitN(text, ":", 3)
-
-		title := strings[2]
-
-		trie.Add(title)
-
-		if i > 0 && i%1000000 == 0 {
-			log.Printf("loaded %v lines", i)
-		}
-
-	}
-	log.Printf("loading complete, %v lines\n", i)
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("/api/word", func(w http.ResponseWriter, r *http.Request) {
-		getWord(trie, w, r)
-	})
-	mux.Handle("/", http.FileServer(http.Dir("static")))
-
-	log.Fatal(http.ListenAndServe(":53172", mux))
 }
