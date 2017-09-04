@@ -5,6 +5,7 @@ var SEARCHBOX = document.getElementById("searchbox");
 var COMPLETIONS = document.getElementById("completions");
 
 SEARCHBOX.addEventListener("input", inputChange);
+SEARCHBOX.addEventListener("keypress", goToFirstLink);
 SEARCHBOX.focus();
 
 if (SEARCHBOX.value.length > 0) {
@@ -13,6 +14,14 @@ if (SEARCHBOX.value.length > 0) {
 
 function createWikiLink(word) {
     return '<a href="' + WIKI_ROOT + encodeURIComponent(word) + '">' + word + '</a>';
+}
+
+function goToFirstLink(e) {
+    var key = e.key | e.keyCode | e.which;
+    if (key == '13') {
+        window.location.href = completions.firstChild.href;
+    }
+    return false;
 }
 
 function callAPI(word, searchbox, completions) {
