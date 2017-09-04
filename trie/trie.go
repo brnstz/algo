@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-const MAX_COMPLETIONS = 10
+const MAX_COMPLETIONS = 100
 
 // Trie is a node in our Trie structure
 type Trie struct {
@@ -199,7 +199,7 @@ func getWord(t *Trie, w http.ResponseWriter, r *http.Request) {
 	word := r.FormValue("word")
 
 	response.Exists, node = t.Exists(word)
-	if node != nil {
+	if node != nil && node.Letter != 0 {
 		response.Completions = node.FindCompletions(word, MAX_COMPLETIONS)
 	}
 
@@ -236,6 +236,7 @@ func main() {
 		if i > 0 && i%1000000 == 0 {
 			log.Printf("loaded %v lines", i)
 		}
+
 	}
 	log.Printf("loading complete, %v lines\n", i)
 
@@ -243,6 +244,7 @@ func main() {
 	mux.HandleFunc("/api/word", func(w http.ResponseWriter, r *http.Request) {
 		getWord(trie, w, r)
 	})
+	mux.Handle("/", http.FileServer(http.Dir("static")))
 
 	log.Fatal(http.ListenAndServe(":53172", mux))
 }
