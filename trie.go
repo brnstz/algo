@@ -9,12 +9,10 @@ type Trie struct {
 	Leaf bool
 
 	// A pointer to the next sibling of this node
-	NextSibling *Trie
+	Sibling *Trie
 
-	// The head and tail of a linked list of children one level below
-	// this node
-	FirstChild *Trie
-	LastChild  *Trie
+	// A pointer to the first child of this node
+	Child *Trie
 }
 
 // NewTrie creates a new trie node. Use 0 as the letter for the root node.
@@ -27,7 +25,7 @@ func NewTrie(letter rune) *Trie {
 // FindChild finds a trie node for this rune at one level below t or returns
 // nil
 func (t *Trie) FindChild(letter rune) *Trie {
-	child := t.FirstChild
+	child := t.Child
 
 	// Check all siblings for this letter
 	for child != nil {
@@ -35,7 +33,7 @@ func (t *Trie) FindChild(letter rune) *Trie {
 			return child
 		}
 
-		child = child.NextSibling
+		child = child.Sibling
 	}
 
 	// Nope, couldn't find it
@@ -53,17 +51,20 @@ func (t *Trie) EnsureChild(letter rune) *Trie {
 	if child == nil {
 		child = NewTrie(letter)
 
-		if t.FirstChild == nil {
-
-			// It's the first entry, we need to set head and tail
-			t.FirstChild = child
-			t.LastChild = child
+		if t.Child == nil {
+			// If it's the first child, just set it
+			t.Child = child
 
 		} else {
+			// Otherwise, find the tail and set its
+			// sibling to the new child
+			tail := t.Child
 
-			// It's not the first entry
-			t.LastChild.NextSibling = child
-			t.LastChild = child
+			for tail.Sibling != nil {
+				tail = tail.Sibling
+			}
+
+			tail.Sibling = child
 		}
 	}
 
@@ -151,7 +152,7 @@ func (t *Trie) FindCompletions(word string, max int) []string {
 		tw = q.Pop()
 
 		// Check for children that complete a word
-		child = tw.trie.FirstChild
+		child = tw.trie.Child
 		for child != nil {
 			childWord := tw.word + string(child.Letter)
 
@@ -168,7 +169,7 @@ func (t *Trie) FindCompletions(word string, max int) []string {
 			// Add child to queue to process its children
 			q.Push(trieWord{word: childWord, trie: child})
 
-			child = child.NextSibling
+			child = child.Sibling
 		}
 	}
 
