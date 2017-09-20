@@ -94,10 +94,10 @@ func main() {
 	// Map wiki to a bitmask
 	wikiMasks := map[string]int64{}
 
-	// Send the URL for each wiki to the downloader
+	// Send the code and bitmask for each wiki to the downloader
 	mask := 1
 	for _, wiki := range wikis {
-		dlchan <- fmt.Sprintf(WIKI_INDEX_URL, wiki, DUMP_DATE, wiki, DUMP_DATE)
+		dlchan <- dlReq{wiki: wiki, mask: mask}
 		wikiMasks[wiki] = mask
 		mask = mask << 1
 	}
