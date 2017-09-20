@@ -14,12 +14,11 @@ import (
 )
 
 const (
-	MAX_COMPLETIONS   = 100
-	LOAD_LOG_INTERVAL = 1000000
-	DUMP_DATE         = "20170820"
-	WIKI_INDEX_URL    = "http://dumps.wikimedia.your.org/%vwiki/%v/%vwiki-%v-pages-articles-multistream-index.txt.bz2"
-	WIKIS             = "en|ceb|sv|de|nl|fr|ru|it|es|war|pl|vi|ja|pt|zh|uk|fa|ca|ar|no|sh|fi|hu|id|ko"
-	DOWNLOAD_WORKERS  = 5
+	MAX_COMPLETIONS  = 25
+	DUMP_DATE        = "20170820"
+	WIKI_INDEX_URL   = "http://dumps.wikimedia.your.org/%vwiki/%v/%vwiki-%v-pages-articles-multistream-index.txt.bz2"
+	WIKIS            = "en|ceb|sv|de|nl|fr|ru|it|es|war|pl|vi|ja|pt|zh|uk|fa|ca|ar|no|sh|fi|hu|id|ko"
+	DOWNLOAD_WORKERS = 5
 )
 
 var writeLock sync.Mutex
@@ -30,8 +29,10 @@ type wordResponse struct {
 }
 
 func download(urls chan string, t *algo.Trie) {
+
 	for url := range urls {
-		log.Println("this is a url:", url)
+		log.Printf("begin downloading %v", url)
+
 		resp, err := http.Get(url)
 		if err != nil {
 			log.Printf("can't download %v: %v\n", url, err)
@@ -43,12 +44,12 @@ func download(urls chan string, t *algo.Trie) {
 		for s.Scan() {
 			parts := strings.SplitN(s.Text(), ":", 3)
 			if len(parts) > 2 {
-				log.Printf("adding %v\n", parts[2])
 				writeLock.Lock()
 				t.Add(parts[2])
 				writeLock.Unlock()
 			}
 		}
+		log.Printf("finished downloading %v", url)
 	}
 }
 
