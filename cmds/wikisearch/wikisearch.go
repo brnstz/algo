@@ -28,9 +28,16 @@ type wordResponse struct {
 	Completions []string `json:"completions"`
 }
 
-func download(urls chan string, t *algo.Trie) {
+type dlReq struct {
+	wiki string
+	mask int64
+}
 
-	for url := range urls {
+func download(reqs chan dlReq, t *algo.Trie) {
+
+	for req := range reqs {
+		url = fmt.Sprintf(WIKI_INDEX_URL, req.wiki, DUMP_DATE, req.wiki, DUMP_DATE)
+
 		log.Printf("begin downloading %v", url)
 
 		resp, err := http.Get(url)
@@ -45,7 +52,7 @@ func download(urls chan string, t *algo.Trie) {
 			parts := strings.SplitN(s.Text(), ":", 3)
 			if len(parts) > 2 {
 				writeLock.Lock()
-				t.Add(parts[2])
+				t.Add(parts[2], req.mask)
 				writeLock.Unlock()
 			}
 		}
@@ -53,7 +60,7 @@ func download(urls chan string, t *algo.Trie) {
 	}
 }
 
-func getWord(t *algo.Trie, w http.ResponseWriter, r *http.Request) {
+func getWord(t *algo.Trie, masks map[string]int64, w http.ResponseWriter, r *http.Request) {
 	var node *algo.Trie
 
 	response := wordResponse{}
@@ -84,9 +91,15 @@ func main() {
 	// Create a channel to concurrently download wikis
 	dlchan := make(chan string, len(wikis))
 
+	// Map wiki to a bitmask
+	wikiMasks := map[string]int64{}
+
 	// Send the URL for each wiki to the downloader
+	mask := 1
 	for _, wiki := range wikis {
 		dlchan <- fmt.Sprintf(WIKI_INDEX_URL, wiki, DUMP_DATE, wiki, DUMP_DATE)
+		wikiMasks[wiki] = mask
+		mask = mask << 1
 	}
 
 	// Create concurrent workers
@@ -96,7 +109,7 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/word", func(w http.ResponseWriter, r *http.Request) {
-		getWord(trie, w, r)
+		getWord(trie, wikiMasks, w, r)
 	})
 	mux.Handle("/", http.FileServer(http.Dir("static")))
 

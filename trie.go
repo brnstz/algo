@@ -5,8 +5,10 @@ type Trie struct {
 	// The letter this Trie represents
 	Letter rune
 
-	// Is this node the end of a word?
-	Leaf bool
+	// Value is a bitmask that determines what we can do
+	// with this node. A zero value must represent a non-word, whereas
+	// a non-zero can be interpreted by the client however it wants.
+	Value int64
 
 	// A pointer to the next sibling of this node
 	Sibling *Trie
@@ -75,7 +77,7 @@ func (t *Trie) ensureChild(letter rune) *Trie {
 }
 
 // Add a word to the trie
-func (t *Trie) Add(word string) {
+func (t *Trie) Add(word string, value int64) {
 	var child *Trie
 
 	// Start with our root trie
@@ -91,12 +93,12 @@ func (t *Trie) Add(word string) {
 		node = child
 	}
 
-	// Setting as a leaf node indicates this is node is a word.
-	node.Leaf = true
+	// Set new value of this node by running OR on existing value
+	node.Value = node.Value | value
 }
 
 // Exists returns a boolean indicating whether this word exists or not in our
-// trie.
+// trie. It also returns the Trie node when found.
 func (t *Trie) Exists(word string) (bool, *Trie) {
 	node := t
 
@@ -111,7 +113,7 @@ func (t *Trie) Exists(word string) (bool, *Trie) {
 	}
 
 	// If the final letter isn't a leaf node, then it isn't a word
-	return node.Leaf, node
+	return node.Value > 0, node
 }
 
 // trieWord is a Trie node and the word up until that node. Eg, if we were
@@ -160,7 +162,7 @@ func (t *Trie) FindCompletions(word string, max int) []string {
 			childWord := tw.word + string(child.Letter)
 
 			// If it's a word, add it to our words
-			if child.Leaf {
+			if child.Value > 0 {
 				completions = append(completions, childWord)
 			}
 
