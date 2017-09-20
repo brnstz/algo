@@ -14,11 +14,12 @@ import (
 )
 
 const (
-	MAX_COMPLETIONS  = 25
-	DUMP_DATE        = "20170820"
-	WIKI_INDEX_URL   = "http://dumps.wikimedia.your.org/%vwiki/%v/%vwiki-%v-pages-articles-multistream-index.txt.bz2"
-	WIKIS            = "en|ceb|sv|de|nl|fr|ru|it|es|war|pl|vi|ja|pt|zh|uk|fa|ca|ar|no|sh|fi|hu|id|ko"
-	DOWNLOAD_WORKERS = 5
+	maxCompletions  = 25
+	dumpDate        = "20170820"
+	wikiIndexURL    = "http://dumps.wikimedia.your.org/%vwiki/%v/%vwiki-%v-pages-articles-multistream-index.txt.bz2"
+	wikiCodes       = "en|ceb|sv|de|nl|fr|ru|it|es|war|pl|vi|ja|pt|zh|uk|fa|ca|ar|no|sh|fi|hu|id|ko"
+	downloadWorkers = 5
+	titleField      = 3
 )
 
 var writeLock sync.Mutex
@@ -26,6 +27,7 @@ var writeLock sync.Mutex
 type wordResponse struct {
 	Exists      bool     `json:"exists"`
 	Completions []string `json:"completions"`
+	Wikis       []string `json:"wikis"`
 }
 
 type dlReq struct {
@@ -36,7 +38,7 @@ type dlReq struct {
 func download(reqs chan dlReq, t *algo.Trie) {
 
 	for req := range reqs {
-		url = fmt.Sprintf(WIKI_INDEX_URL, req.wiki, DUMP_DATE, req.wiki, DUMP_DATE)
+		url := fmt.Sprintf(wikiIndexURL, req.wiki, dumpDate, req.wiki, dumpDate)
 
 		log.Printf("begin downloading %v", url)
 
@@ -49,14 +51,13 @@ func download(reqs chan dlReq, t *algo.Trie) {
 
 		s := bufio.NewScanner(bzip2.NewReader(resp.Body))
 		for s.Scan() {
-			parts := strings.SplitN(s.Text(), ":", 3)
-			if len(parts) > 2 {
+			parts := strings.SplitN(s.Text(), ":", titleField)
+			if len(parts) == titleField {
 				writeLock.Lock()
-				t.Add(parts[2], req.mask)
+				t.Add(parts[titleField-1], req.mask)
 				writeLock.Unlock()
 			}
 		}
-		log.Printf("finished downloading %v", url)
 	}
 }
 
@@ -68,7 +69,7 @@ func getWord(t *algo.Trie, masks map[string]int64, w http.ResponseWriter, r *htt
 
 	response.Exists, node = t.Exists(word)
 	if node != nil && node.Letter != 0 {
-		response.Completions = node.FindCompletions(word, MAX_COMPLETIONS)
+		response.Completions = node.FindCompletions(word)
 	}
 
 	b, err := json.Marshal(response)
@@ -86,7 +87,7 @@ func main() {
 	trie := algo.NewTrie()
 
 	// The list of wikis we want to download
-	wikis := strings.Split(WIKIS, "|")
+	wikis := strings.Split(wikiCodes, "|")
 
 	// Create a channel to concurrently download wikis
 	dlchan := make(chan string, len(wikis))
@@ -103,7 +104,7 @@ func main() {
 	}
 
 	// Create concurrent workers
-	for i := 0; i < DOWNLOAD_WORKERS; i++ {
+	for i := 0; i < downloadWorkers; i++ {
 		go download(dlchan, trie)
 	}
 
