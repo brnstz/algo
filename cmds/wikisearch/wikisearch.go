@@ -69,7 +69,15 @@ func getWord(t *algo.Trie, masks map[string]int64, w http.ResponseWriter, r *htt
 
 	response.Exists, node = t.Exists(word)
 	if node != nil && node.Letter != 0 {
-		response.Completions = node.FindCompletions(word)
+		response.Completions = node.FindCompletions(word, maxCompletions)
+	}
+
+	if node != nil {
+		for wiki, mask := range masks {
+			if mask&node.Value == mask {
+				response.Wikis = append(response.Wikis, wiki)
+			}
+		}
 	}
 
 	b, err := json.Marshal(response)
@@ -90,22 +98,22 @@ func main() {
 	wikis := strings.Split(wikiCodes, "|")
 
 	// Create a channel to concurrently download wikis
-	dlchan := make(chan string, len(wikis))
+	dlChan := make(chan dlReq, len(wikis))
 
 	// Map wiki to a bitmask
 	wikiMasks := map[string]int64{}
 
 	// Send the code and bitmask for each wiki to the downloader
-	mask := 1
+	var mask int64 = 1
 	for _, wiki := range wikis {
-		dlchan <- dlReq{wiki: wiki, mask: mask}
+		dlChan <- dlReq{wiki: wiki, mask: mask}
 		wikiMasks[wiki] = mask
 		mask = mask << 1
 	}
 
 	// Create concurrent workers
 	for i := 0; i < downloadWorkers; i++ {
-		go download(dlchan, trie)
+		go download(dlChan, trie)
 	}
 
 	mux := http.NewServeMux()
