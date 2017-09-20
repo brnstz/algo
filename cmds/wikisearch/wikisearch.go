@@ -4,8 +4,11 @@ import (
 	"bufio"
 	"compress/bzip2"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"strings"
+	"sync"
 
 	"github.com/brnstz/algo"
 )
@@ -13,36 +16,40 @@ import (
 const (
 	MAX_COMPLETIONS   = 100
 	LOAD_LOG_INTERVAL = 1000000
-	DUMP_DATE         = "20178020"
+	DUMP_DATE         = "20170820"
 	WIKI_INDEX_URL    = "http://dumps.wikimedia.your.org/%vwiki/%v/%vwiki-%v-pages-articles-multistream-index.txt.bz2"
 	WIKIS             = "en|ceb|sv|de|nl|fr|ru|it|es|war|pl|vi|ja|pt|zh|uk|fa|ca|ar|no|sh|fi|hu|id|ko"
 	DOWNLOAD_WORKERS  = 5
 )
+
+var writeLock sync.Mutex
 
 type wordResponse struct {
 	Exists      bool     `json:"exists"`
 	Completions []string `json:"completions"`
 }
 
-func download(url string, t *algo.Trie) {
-	resp, err := http.Get(url)
-	if err != nil {
-		log.Println("can't download %v: %v", url, err)
-		return
-	}
-	defer resp.Body.Close()
+func download(urls chan string, t *algo.Trie) {
+	for url := range urls {
+		log.Println("this is a url:", url)
+		resp, err := http.Get(url)
+		if err != nil {
+			log.Printf("can't download %v: %v\n", url, err)
+			return
+		}
+		defer resp.Body.Close()
 
-	reader, err := bzip2.NewReader(resp.Body)
-	if err != nil {
-		log.Println("can't read bzip2 data in %v: %v", url, err)
-		return
+		s := bufio.NewScanner(bzip2.NewReader(resp.Body))
+		for s.Scan() {
+			parts := strings.SplitN(s.Text(), ":", 3)
+			if len(parts) > 2 {
+				log.Printf("adding %v\n", parts[2])
+				writeLock.Lock()
+				t.Add(parts[2])
+				writeLock.Unlock()
+			}
+		}
 	}
-
-	s := bufio.NewScanner(reader)
-	for s.Scan() {
-		t.Add(s.Text())
-	}
-
 }
 
 func getWord(t *algo.Trie, w http.ResponseWriter, r *http.Request) {
@@ -67,18 +74,30 @@ func getWord(t *algo.Trie, w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	trie := algo.NewTrie(0)
+	// Create our global trie
+	trie := algo.NewTrie()
+
+	// The list of wikis we want to download
+	wikis := strings.Split(WIKIS, "|")
+
+	// Create a channel to concurrently download wikis
+	dlchan := make(chan string, len(wikis))
+
+	// Send the URL for each wiki to the downloader
+	for _, wiki := range wikis {
+		dlchan <- fmt.Sprintf(WIKI_INDEX_URL, wiki, DUMP_DATE, wiki, DUMP_DATE)
+	}
+
+	// Create concurrent workers
+	for i := 0; i < DOWNLOAD_WORKERS; i++ {
+		go download(dlchan, trie)
+	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/word", func(w http.ResponseWriter, r *http.Request) {
 		getWord(trie, w, r)
 	})
 	mux.Handle("/", http.FileServer(http.Dir("static")))
-
-	for i := 0; i < DOWNLOAD_WORKERS; i++ {
-		go download()
-
-	}
 
 	log.Fatal(http.ListenAndServe(":53172", mux))
 }

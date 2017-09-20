@@ -15,16 +15,19 @@ type Trie struct {
 	Child *Trie
 }
 
-// NewTrie creates a new trie node. Use 0 as the letter for the root node.
-func NewTrie(letter rune) *Trie {
-	t := &Trie{Letter: letter}
-
-	return t
+// NewTrie creates a new trie root with 0 as the value.
+func NewTrie() *Trie {
+	return &Trie{Letter: 0}
 }
 
-// FindChild finds a trie node for this rune at one level below t or returns
+// newTrieNode creates a new trie node.
+func newTrieNode(letter rune) *Trie {
+	return &Trie{Letter: letter}
+}
+
+// findChild finds a trie node for this rune at one level below t or returns
 // nil
-func (t *Trie) FindChild(letter rune) *Trie {
+func (t *Trie) findChild(letter rune) *Trie {
 	child := t.Child
 
 	// Check all siblings for this letter
@@ -40,16 +43,16 @@ func (t *Trie) FindChild(letter rune) *Trie {
 	return nil
 }
 
-// EnsureChild ensures that a trie node for this letter exists at one level
+// ensureChild ensures that a trie node for this letter exists at one level
 // below t
-func (t *Trie) EnsureChild(letter rune) *Trie {
+func (t *Trie) ensureChild(letter rune) *Trie {
 
 	// Can we find the child already?
-	child := t.FindChild(letter)
+	child := t.findChild(letter)
 
 	// If not, create a node and append it to the children list
 	if child == nil {
-		child = NewTrie(letter)
+		child = newTrieNode(letter)
 
 		if t.Child == nil {
 			// If it's the first child, just set it
@@ -82,7 +85,7 @@ func (t *Trie) Add(word string) {
 	// node exists.
 	for _, letter := range word {
 
-		child = node.EnsureChild(letter)
+		child = node.ensureChild(letter)
 
 		// Run down the tree to the next node and add the next letter
 		node = child
@@ -101,7 +104,7 @@ func (t *Trie) Exists(word string) (bool, *Trie) {
 
 		// If at any point we don't have a child, then this word
 		// doesn't exist
-		node = node.FindChild(letter)
+		node = node.findChild(letter)
 		if node == nil {
 			return false, nil
 		}
