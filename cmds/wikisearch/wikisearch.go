@@ -18,6 +18,7 @@ const (
 	maxCompletions  = 25
 	dumpDate        = "20170820"
 	wikiIndexURL    = "http://dumps.wikimedia.your.org/%vwiki/%v/%vwiki-%v-pages-articles-multistream-index.txt.bz2"
+	streamURL       = "https://stream.wikimedia.org/v2/stream/recentchange"
 	wikiCodes       = "en|ceb|sv|de|nl|fr|ru|it|es|war|pl|vi|ja|pt|zh|uk|fa|ca|ar|no|sh|fi|hu|id|ko"
 	downloadWorkers = 5
 	titleField      = 3
@@ -38,6 +39,18 @@ type wordResponse struct {
 type dlReq struct {
 	wiki string
 	mask int64
+}
+
+func loadStream() {
+	// Continue forever if we are disconnected
+	for {
+		resp, err := http.Get(streamURL)
+		if err != nil {
+			log.Printf("can't download %v: %v\n", url, err)
+			return
+		}
+		defer resp.Body.Close()
+	}
 }
 
 func download(reqs chan dlReq, t *algo.Trie) {
