@@ -12,8 +12,8 @@ if (SEARCHBOX.value.length > 0) {
     callAPI(SEARCHBOX.value, SEARCHBOX, COMPLETIONS);
 }
 
-function createWikiLink(word) {
-    return '<a href="' + WIKI_ROOT + encodeURIComponent(word) + '">' + word + '</a>';
+function createWikiLink(word, wiki) {
+    return '<a href="' + 'https://' + wiki + '.wikipedia.org/wiki/' + encodeURIComponent(word) + '">' + word + ' (' + wiki + ')</a>';
 }
 
 function goToFirstLink(e) {
@@ -45,13 +45,16 @@ function callAPI(word, searchbox, completions) {
 
         // If this word is a word, that counts as a completion
         if (r.exists) {
-            completions.innerHTML += createWikiLink(word) + "<br>";
+            for (j = 0; j < r.wikis.length; j++) {
+                completions.innerHTML += createWikiLink(word, r.wikis[j]) + "<br>";
+            }
         }
 
         // List our auto-completions
         if (r.completions != null && word.length > 0) {
             for (i = 0; i < r.completions.length; i++) {
-                completions.innerHTML += createWikiLink(r.completions[i]) + "<br>";
+                //completions.innerHTML += createWikiLink(r.completions[i]) + "<br>";
+                completions.innerHTML += r.completions[i] + "<br>";
             }
         }
         
