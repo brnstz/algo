@@ -138,19 +138,25 @@ func (q *queue) Pop() trieWord {
 	return t
 }
 
+type Completion struct {
+	Word string
+	Node *Trie
+}
+
 // FindCompletions does a breadth-first search below this trie node, and
 // finds up to max completed words under it.
-func (t *Trie) FindCompletions(word string, max int) []string {
-	var child *Trie
-	var tw trieWord
-	var q queue
-
-	completions := []string{}
+func (t *Trie) FindCompletions(word string, max int) []Completion {
+	var (
+		child       *Trie
+		tw          trieWord
+		q           queue
+		completions []Completion
+	)
 
 	// Initialize q with ourselves
 	q.Push(trieWord{word: word, trie: t})
 
-	// While we still have stuff in our queue
+	// While we still have nodes in our queue
 	for len(q) > 0 {
 
 		// Get the word and trie node off the queue
@@ -163,7 +169,11 @@ func (t *Trie) FindCompletions(word string, max int) []string {
 
 			// If it's a word, add it to our words
 			if child.Value > 0 {
-				completions = append(completions, childWord)
+				completion := Completion{
+					Word: childWord,
+					Node: child,
+				}
+				completions = append(completions, completion)
 			}
 
 			// If we have enough words, then stop
@@ -174,6 +184,7 @@ func (t *Trie) FindCompletions(word string, max int) []string {
 			// Add child to queue to process its children
 			q.Push(trieWord{word: childWord, trie: child})
 
+			// Try the next sibling
 			child = child.Sibling
 		}
 	}
