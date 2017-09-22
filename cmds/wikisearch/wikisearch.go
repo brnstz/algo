@@ -19,7 +19,7 @@ const (
 	dumpDate         = "20170820"
 	wikiIndexURL     = "http://dumps.wikimedia.your.org/%vwiki/%v/%vwiki-%v-pages-articles-multistream-index.txt.bz2"
 	streamURL        = "https://stream.wikimedia.org/v2/stream/recentchange"
-	wikiCodes        = "en|ceb|sv|de|nl|fr|ru|it|es|war|pl|vi|ja|pt|zh|uk|fa|ca|ar|no|sh|fi|hu|id|ko"
+	wikiCodes        = "en|ceb|sv|de|nl|fr|ru|it|es|war|pl|vi|ja|pt|zh|uk|fa|ca|ar|no|sh|fi|hu|id|ko|simple"
 	downloadWorkers  = 5
 	titleField       = 3
 	streamDataPrefix = "data: "
