@@ -14,14 +14,15 @@ import (
 )
 
 const (
-	loadLogInterval = 1000000
-	maxCompletions  = 25
-	dumpDate        = "20170820"
-	wikiIndexURL    = "http://dumps.wikimedia.your.org/%vwiki/%v/%vwiki-%v-pages-articles-multistream-index.txt.bz2"
-	streamURL       = "https://stream.wikimedia.org/v2/stream/recentchange"
-	wikiCodes       = "en|ceb|sv|de|nl|fr|ru|it|es|war|pl|vi|ja|pt|zh|uk|fa|ca|ar|no|sh|fi|hu|id|ko"
-	downloadWorkers = 5
-	titleField      = 3
+	loadLogInterval  = 1000000
+	maxCompletions   = 25
+	dumpDate         = "20170820"
+	wikiIndexURL     = "http://dumps.wikimedia.your.org/%vwiki/%v/%vwiki-%v-pages-articles-multistream-index.txt.bz2"
+	streamURL        = "https://stream.wikimedia.org/v2/stream/recentchange"
+	wikiCodes        = "en|ceb|sv|de|nl|fr|ru|it|es|war|pl|vi|ja|pt|zh|uk|fa|ca|ar|no|sh|fi|hu|id|ko"
+	downloadWorkers  = 5
+	titleField       = 3
+	streamDataPrefix = "data: "
 )
 
 var writeLock sync.Mutex
@@ -41,15 +42,59 @@ type dlReq struct {
 	mask int64
 }
 
-func loadStream() {
+type wikiStream struct {
+	Title string
+	Wiki  string
+}
+
+func loadStream(masks map[string]int64, t *algo.Trie) {
+	var ws wikiStream
+
 	// Continue forever if we are disconnected
 	for {
-		resp, err := http.Get(streamURL)
-		if err != nil {
-			log.Printf("can't download %v: %v\n", url, err)
-			return
-		}
-		defer resp.Body.Close()
+		func() {
+
+			// Open up the stream URL
+			resp, err := http.Get(streamURL)
+			if err != nil {
+				log.Printf("can't download %v: %v\n", streamURL, err)
+				return
+			}
+			defer resp.Body.Close()
+
+			// Read each line
+			s := bufio.NewScanner(resp.Body)
+			for s.Scan() {
+				text := s.Text()
+
+				// Check if we have the "data: " prefix
+				if strings.HasPrefix(text, streamDataPrefix) {
+
+					// Read the JSON data after the prefix until the
+					// end of the line.
+					jbytes := []byte(text[len(streamDataPrefix):len(text)])
+					err := json.Unmarshal(jbytes, &ws)
+					if err != nil {
+						log.Printf("can't unmarshal: %v", err)
+						continue
+					}
+
+					// Pick which wiki this is in, if it's not one
+					// we support, then forget it
+					wiki := ws.Wiki[0:strings.Index(ws.Wiki, "wik")]
+					mask, exists := masks[wiki]
+					if !exists {
+						continue
+					}
+
+					// Add to our trie
+					writeLock.Lock()
+					log.Println(ws.Title, mask, wiki)
+					t.Add(ws.Title, mask)
+					writeLock.Unlock()
+				}
+			}
+		}()
 	}
 }
 
@@ -157,6 +202,8 @@ func main() {
 	for i := 0; i < downloadWorkers; i++ {
 		go download(dlChan, trie)
 	}
+
+	go loadStream(wikiMasks, trie)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/word", func(w http.ResponseWriter, r *http.Request) {
