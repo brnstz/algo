@@ -43,8 +43,8 @@ type dlReq struct {
 }
 
 type wikiStream struct {
-	Title string
-	Wiki  string
+	Title      string `json:"title"`
+	ServerName string `json:"server_name"`
 }
 
 func loadStream(masks map[string]int64, t *algo.Trie) {
@@ -81,7 +81,7 @@ func loadStream(masks map[string]int64, t *algo.Trie) {
 
 					// Pick which wiki this is in, if it's not one
 					// we support, then forget it
-					wiki := ws.Wiki[0:strings.Index(ws.Wiki, "wik")]
+					wiki := strings.Split(ws.ServerName, ".")[0]
 					mask, exists := masks[wiki]
 					if !exists {
 						continue
