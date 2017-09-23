@@ -46,8 +46,13 @@ func (t *Trie) findChild(letter rune) *Trie {
 }
 
 // ensureChild ensures that a trie node for this letter exists at one level
-// below t
-func (t *Trie) ensureChild(letter rune) *Trie {
+// below t. Returns the node itself, whether this node was newly created,
+// and how many siblings the node has.
+func (t *Trie) ensureChild(letter rune) (*Trie, bool, int) {
+	var (
+		siblings int
+		newNode  bool
+	)
 
 	// Can we find the child already?
 	child := t.findChild(letter)
@@ -55,6 +60,7 @@ func (t *Trie) ensureChild(letter rune) *Trie {
 	// If not, create a node and append it to the children list
 	if child == nil {
 		child = newTrieNode(letter)
+		newNode = true
 
 		if t.Child == nil {
 			// If it's the first child, just set it
@@ -67,18 +73,24 @@ func (t *Trie) ensureChild(letter rune) *Trie {
 
 			for tail.Sibling != nil {
 				tail = tail.Sibling
+				siblings++
 			}
 
 			tail.Sibling = child
 		}
 	}
 
-	return child
+	return child, newNode, siblings
 }
 
-// Add a word to the trie
-func (t *Trie) Add(word string, value int64) {
-	var child *Trie
+// Add a word to the trie. Returns how many new nodes were created, and the
+// maximum number of siblings a node has.
+func (t *Trie) Add(word string, value int64) (int, int) {
+	var (
+		child                           *Trie
+		newNode                         bool
+		newNodes, maxSiblings, siblings int
+	)
 
 	// Start with our root trie
 	node := t
@@ -87,7 +99,18 @@ func (t *Trie) Add(word string, value int64) {
 	// node exists.
 	for _, letter := range word {
 
-		child = node.ensureChild(letter)
+		// Create new child
+		child, newNode, siblings = node.ensureChild(letter)
+
+		// If we created a new node, record that
+		if newNode {
+			newNodes++
+		}
+
+		// If we have a new max siblings count, record that
+		if siblings > maxSiblings {
+			maxSiblings = siblings
+		}
 
 		// Run down the tree to the next node and add the next letter
 		node = child
@@ -95,6 +118,8 @@ func (t *Trie) Add(word string, value int64) {
 
 	// Set new value of this node by running OR on existing value
 	node.Value = node.Value | value
+
+	return newNodes, maxSiblings
 }
 
 // Exists returns a boolean indicating whether this word exists or not in our

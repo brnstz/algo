@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	_ "net/http/pprof"
 	"strings"
 	"sync"
 
@@ -23,9 +24,9 @@ const (
 	downloadWorkers  = 5
 	titleField       = 3
 	streamDataPrefix = "data: "
-)
 
-var writeLock sync.Mutex
+//	countSiblings    = 10
+)
 
 type completion struct {
 	Word  string   `json:"word"`
@@ -53,6 +54,7 @@ func loadStream(masks map[string]int64, t *algo.Trie) {
 	// Continue forever if we are disconnected
 	for {
 		func() {
+			log.Printf("loading stream from %v\n", streamURL)
 
 			// Open up the stream URL
 			resp, err := http.Get(streamURL)
@@ -87,11 +89,7 @@ func loadStream(masks map[string]int64, t *algo.Trie) {
 						continue
 					}
 
-					// Add to our trie
-					writeLock.Lock()
-					log.Println(ws.Title, mask, wiki)
-					t.Add(ws.Title, mask)
-					writeLock.Unlock()
+					add(t, ws.Title, mask)
 				}
 			}
 		}()
@@ -117,17 +115,9 @@ func download(reqs chan dlReq, t *algo.Trie) {
 		for s.Scan() {
 			parts := strings.SplitN(s.Text(), ":", titleField)
 			if len(parts) == titleField {
-				writeLock.Lock()
-				t.Add(parts[titleField-1], req.mask)
-				writeLock.Unlock()
-				i += 1
-
-				if i%loadLogInterval == 0 {
-					log.Printf("loaded %v records from %v.wikipedia.org",
-						i, req.wiki,
-					)
-				}
+				add(t, parts[titleField-1], req.mask)
 			}
+			i++
 		}
 
 		log.Printf("finished loading %v records from %v.wikipedia.org", i, req.wiki)
@@ -177,6 +167,43 @@ func getWord(t *algo.Trie, masks map[string]int64, w http.ResponseWriter, r *htt
 	w.Write(b)
 }
 
+var (
+	writeLock sync.Mutex
+
+	// Keep track of N top siblings
+	/*
+		topSiblings                              []int
+		minTopSiblingIndex, siblings, topSibling int
+	*/
+
+	totalNodes, totalLetters, nodes, letters, titles int
+)
+
+func add(t *algo.Trie, title string, mask int64) {
+	// Add to our trie
+	writeLock.Lock()
+
+	titles += 1
+	totalLetters += len(title)
+	nodes, _ = t.Add(title, mask)
+	totalNodes += nodes
+
+	/*
+		if len(topSiblings) < countSiblings {
+			topSiblings = append(topSiblings, sibling)
+		} else {
+	*/
+
+	if titles%loadLogInterval == 0 {
+		log.Printf("loaded %v titles", titles)
+		log.Printf("letters:      %v", totalLetters)
+		log.Printf("nodes:        %v", totalNodes)
+		// log.Printf("max siblings: %v", maxSiblings)
+	}
+
+	writeLock.Unlock()
+}
+
 func main() {
 	// Create our global trie
 	trie := algo.NewTrie()
@@ -203,9 +230,10 @@ func main() {
 		go download(dlChan, trie)
 	}
 
+	// Load the live stream
 	go loadStream(wikiMasks, trie)
 
-	mux := http.NewServeMux()
+	mux := http.DefaultServeMux
 	mux.HandleFunc("/api/word", func(w http.ResponseWriter, r *http.Request) {
 		getWord(trie, wikiMasks, w, r)
 	})
