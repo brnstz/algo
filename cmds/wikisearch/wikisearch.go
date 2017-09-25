@@ -142,16 +142,18 @@ func getWord(t *algo.Trie, masks map[string]int64, w http.ResponseWriter, r *htt
 	word := r.FormValue("word")
 
 	response.Exists, node = t.Exists(word)
-	if node != nil && node.Letter != 0 {
-		rawCompletions := node.FindCompletions(word, maxCompletions)
-		for _, rawCompletion := range rawCompletions {
-			completion := completion{
-				Word:  rawCompletion.Word,
-				Wikis: findWikis(masks, rawCompletion.Node.Value),
+	/*
+		if node != nil && node.Letter != 0 {
+			rawCompletions := node.FindCompletions(word, maxCompletions)
+			for _, rawCompletion := range rawCompletions {
+				completion := completion{
+					Word:  rawCompletion.Word,
+					Wikis: findWikis(masks, rawCompletion.Node.Value),
+				}
+				response.Completions = append(response.Completions, completion)
 			}
-			response.Completions = append(response.Completions, completion)
 		}
-	}
+	*/
 
 	if node != nil {
 		response.Wikis = findWikis(masks, node.Value)
