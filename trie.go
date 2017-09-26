@@ -1,5 +1,10 @@
 package algo
 
+import (
+	"fmt"
+	"log"
+)
+
 // Trie is a node in our Trie structure
 type Trie struct {
 	// The letter this Trie represents
@@ -215,4 +220,65 @@ func (t *Trie) FindCompletions(word string, max int) []Completion {
 	}
 
 	return completions
+}
+
+// ChildCount is a count of children that we can insert into a PriorityQueue
+// by implementing the PQItem interface
+type ChildCount int
+
+// FIXME: explain logic
+func (self ChildCount) PQLess(other PQItem) bool {
+	return self > other.(ChildCount)
+}
+
+func (t *Trie) countChildrenAux(pq *PriorityQueue) {
+	var children ChildCount
+	var item PQItem
+	var child *Trie
+	var err error
+
+	// Count children and children's children, recursively.
+	child = t.Child
+	for child != nil {
+		child.countChildrenAux(pq)
+		child = child.Sibling
+		children++
+	}
+
+	if pq.Size() < pq.MaxSize() || pq.IsEmpty() {
+		// If our pq isn't full, just insert the item
+		pq.Insert(children)
+	} else {
+		// Otherwise, only insert the item if it's greater than
+		// the current "max" value (actually the minimum)
+		item, err = pq.GetMax()
+		if err != nil {
+			// Since we already checked for Empty, it's a bug if we
+			// get an error here
+			log.Fatal(err)
+		}
+
+		if children > item.(ChildCount) {
+			pq.DelMax()
+			pq.Insert(children)
+		}
+	}
+}
+
+func (t *Trie) CountChildren(n int) {
+	var err error
+	var item PQItem
+
+	pq := NewPriorityQueue(n)
+
+	t.countChildrenAux(pq)
+
+	for pq.Size() > 0 {
+		item, err = pq.DelMax()
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		fmt.Println(item)
+	}
 }

@@ -15,13 +15,15 @@ import (
 )
 
 const (
-	loadLogInterval  = 1000000
-	maxCompletions   = 25
-	dumpDate         = "20170820"
-	wikiIndexURL     = "http://dumps.wikimedia.your.org/%vwiki/%v/%vwiki-%v-pages-articles-multistream-index.txt.bz2"
-	streamURL        = "https://stream.wikimedia.org/v2/stream/recentchange"
-	wikiCodes        = "en|ceb|sv|de|nl|fr|ru|it|es|war|pl|vi|ja|pt|zh|uk|fa|ca|ar|no|sh|fi|hu|id|ko|simple"
-	downloadWorkers  = 5
+	loadLogInterval = 1000000
+	maxCompletions  = 25
+	dumpDate        = "20170820"
+	wikiIndexURL    = "http://dumps.wikimedia.your.org/%vwiki/%v/%vwiki-%v-pages-articles-multistream-index.txt.bz2"
+	streamURL       = "https://stream.wikimedia.org/v2/stream/recentchange"
+	// all wikis with at least 100k articles
+	wikiCodes = "en|ceb|sv|de|nl|fr|ru|it|es|war|pl|vi|ja|pt|zh|uk|fa|ca|ar|no|sh|fi|hu|id|ko|cs|ro|sr|ms|tr|eu|eo|bg|da|hy|sk|zh-min-nan|min|kk|he|lt|hr|ce|et|sl|be|gl|el|nn|uz|simple|la|az|ur|hi|vo|th|ka|ta"
+	//wikiCodes        = "simple"
+	downloadWorkers  = 20
 	titleField       = 3
 	streamDataPrefix = "data: "
 
@@ -121,6 +123,8 @@ func download(reqs chan dlReq, t *algo.Trie) {
 		}
 
 		log.Printf("finished loading %v records from %v.wikipedia.org", i, req.wiki)
+		t.CountChildren(1000)
+
 	}
 }
 
@@ -233,7 +237,7 @@ func main() {
 	}
 
 	// Load the live stream
-	go loadStream(wikiMasks, trie)
+	//go loadStream(wikiMasks, trie)
 
 	mux := http.DefaultServeMux
 	mux.HandleFunc("/api/word", func(w http.ResponseWriter, r *http.Request) {
