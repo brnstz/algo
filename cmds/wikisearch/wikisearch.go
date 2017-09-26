@@ -23,7 +23,7 @@ const (
 	// all wikis with at least 100k articles
 	wikiCodes = "en|ceb|sv|de|nl|fr|ru|it|es|war|pl|vi|ja|pt|zh|uk|fa|ca|ar|no|sh|fi|hu|id|ko|cs|ro|sr|ms|tr|eu|eo|bg|da|hy|sk|zh-min-nan|min|kk|he|lt|hr|ce|et|sl|be|gl|el|nn|uz|simple|la|az|ur|hi|vo|th|ka|ta"
 	//wikiCodes        = "simple"
-	downloadWorkers  = 20
+	downloadWorkers  = 5
 	titleField       = 3
 	streamDataPrefix = "data: "
 
