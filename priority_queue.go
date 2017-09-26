@@ -126,6 +126,15 @@ func (pq *PriorityQueue) Delete(key PQItem) error {
 	return nil
 }
 
+// GetMax returns the highest priority value without deleting it
+func (pq *PriorityQueue) GetMax() (PQItem, error) {
+	if pq.n < 1 {
+		return nil, PQEmpty
+	}
+
+	return pq.data[1]
+}
+
 // Delete the highest priority item in our queue
 func (pq *PriorityQueue) DelMax() (PQItem, error) {
 	if pq.n < 1 {
