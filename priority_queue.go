@@ -132,7 +132,7 @@ func (pq *PriorityQueue) GetMax() (PQItem, error) {
 		return nil, PQEmpty
 	}
 
-	return pq.data[1]
+	return pq.data[1], nil
 }
 
 // Delete the highest priority item in our queue
