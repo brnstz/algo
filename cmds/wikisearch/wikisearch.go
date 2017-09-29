@@ -27,9 +27,10 @@ const (
 	localIndexURL   = "http://localhost:53172/%vwiki-%v-pages-articles-multistream-index.txt.bz2"
 	streamURL       = "https://stream.wikimedia.org/v2/stream/recentchange"
 	// all wikis with at least 100k articles
+	//wikiCodes = "en"
 	wikiCodes = "en|ceb|sv|de|nl|fr|ru|it|es|war|pl|vi|ja|pt|zh|uk|fa|ca|ar|no|sh|fi|hu|id|ko|cs|ro|sr|ms|tr|eu|eo|bg|da|hy|sk|zh_min_nan|min|kk|he|lt|hr|ce|et|sl|be|gl|el|nn|uz|simple|la|az|ur|hi|vo|th|ka|ta"
 	//wikiCodes        = "simple"
-	downloadWorkers  = 10
+	downloadWorkers  = 1
 	titleField       = 3
 	streamDataPrefix = "data: "
 )
