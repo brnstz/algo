@@ -28,11 +28,9 @@ const (
 	// all wikis with at least 100k articles
 	wikiCodes = "en|ceb|sv|de|nl|fr|ru|it|es|war|pl|vi|ja|pt|zh|uk|fa|ca|ar|no|sh|fi|hu|id|ko|cs|ro|sr|ms|tr|eu|eo|bg|da|hy|sk|zh_min_nan|min|kk|he|lt|hr|ce|et|sl|be|gl|el|nn|uz|simple|la|az|ur|hi|vo|th|ka|ta"
 	//wikiCodes        = "simple"
-	downloadWorkers  = 1
+	downloadWorkers  = 10
 	titleField       = 3
 	streamDataPrefix = "data: "
-
-//	countSiblings    = 10
 )
 
 type completion struct {
@@ -191,14 +189,7 @@ func getWord(t *algo.Trie, masks map[string]int64, w http.ResponseWriter, r *htt
 }
 
 var (
-	writeLock sync.Mutex
-
-	// Keep track of N top siblings
-	/*
-		topSiblings                              []int
-		minTopSiblingIndex, siblings, topSibling int
-	*/
-
+	writeLock                                        sync.Mutex
 	totalNodes, totalLetters, nodes, letters, titles int
 )
 
@@ -211,17 +202,10 @@ func add(t *algo.Trie, title string, mask int64) {
 	nodes, _ = t.Add(title, mask)
 	totalNodes += nodes
 
-	/*
-		if len(topSiblings) < countSiblings {
-			topSiblings = append(topSiblings, sibling)
-		} else {
-	*/
-
 	if titles%loadLogInterval == 0 {
 		log.Printf("loaded %v titles", titles)
 		log.Printf("letters:      %v", totalLetters)
 		log.Printf("nodes:        %v", totalNodes)
-		// log.Printf("max siblings: %v", maxSiblings)
 	}
 
 	writeLock.Unlock()
