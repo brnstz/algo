@@ -141,30 +141,41 @@ func (t *Trie) Exists(word string) (bool, *Trie) {
 	return node.Value > 0, node
 }
 
+// trieWord is a Trie node and the word up until that node. Eg, if we were
+// storing "goodbye", the word might be "goodb" and the trie node might be
+// the letter "y". This allows us to use a queue to run a breadth first
+// search in FindCompletions
+type trieWord struct {
+	word string
+	trie *Trie
+}
+
 type Completion struct {
 	Word string
 	Node *Trie
 }
 
-/*
 // FindCompletions does a breadth-first search below this trie node, and
 // finds up to max completed words under it.
-func (t *Trie) FindCompletions(word string, max int) []Completion {
+func (t *Trie) FindCompletions(word string, maxWords, maxQueue int) []Completion {
 	var (
 		child       *Trie
 		tw          trieWord
-		q           queue
+		tw_         interface{}
 		completions []Completion
 	)
 
+	q := NewQueue()
+
 	// Initialize q with ourselves
-	q.Push(trieWord{word: word, trie: t})
+	q.Enqueue(trieWord{word: word, trie: t})
 
 	// While we still have nodes in our queue
-	for len(q) > 0 {
+	for !q.IsEmpty() {
 
 		// Get the word and trie node off the queue
-		tw = q.Pop()
+		tw_, _ = q.Dequeue()
+		tw = tw_.(trieWord)
 
 		// Check for children that complete a word
 		child = tw.trie.Child
@@ -181,12 +192,14 @@ func (t *Trie) FindCompletions(word string, max int) []Completion {
 			}
 
 			// If we have enough words, then stop
-			if len(completions) >= max {
+			if len(completions) >= maxWords {
 				return completions
 			}
 
-			// Add child to queue to process its children
-			q.Push(trieWord{word: childWord, trie: child})
+			if q.Size() < maxQueue {
+				// Add child to queue to process its children
+				q.Enqueue(trieWord{word: childWord, trie: child})
+			}
 
 			// Try the next sibling
 			child = child.Sibling
@@ -195,4 +208,3 @@ func (t *Trie) FindCompletions(word string, max int) []Completion {
 
 	return completions
 }
-*/

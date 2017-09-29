@@ -20,6 +20,7 @@ import (
 const (
 	loadLogInterval = 1000000
 	maxCompletions  = 25
+	maxQueue        = 100
 	dumpDate        = "20170820"
 	wikiIndexURL    = "http://dumps.wikimedia.your.org/%vwiki/%v/%vwiki-%v-pages-articles-multistream-index.txt.bz2"
 	localWikiDir    = "static/wikis/"
@@ -161,18 +162,16 @@ func getWord(t *algo.Trie, masks map[string]int64, w http.ResponseWriter, r *htt
 	word := r.FormValue("word")
 
 	response.Exists, node = t.Exists(word)
-	/*
-		if node != nil && node.Letter != 0 {
-			rawCompletions := node.FindCompletions(word, maxCompletions)
-			for _, rawCompletion := range rawCompletions {
-				completion := completion{
-					Word:  rawCompletion.Word,
-					Wikis: findWikis(masks, rawCompletion.Node.Value),
-				}
-				response.Completions = append(response.Completions, completion)
+	if node != nil && node.Letter != 0 {
+		rawCompletions := node.FindCompletions(word, maxCompletions, maxQueue)
+		for _, rawCompletion := range rawCompletions {
+			completion := completion{
+				Word:  rawCompletion.Word,
+				Wikis: findWikis(masks, rawCompletion.Node.Value),
 			}
+			response.Completions = append(response.Completions, completion)
 		}
-	*/
+	}
 
 	if node != nil {
 		response.Wikis = findWikis(masks, node.Value)
