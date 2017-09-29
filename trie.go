@@ -1,10 +1,5 @@
 package algo
 
-import (
-	"fmt"
-	"log"
-)
-
 // Trie is a node in our Trie structure
 type Trie struct {
 	// The letter this Trie represents
@@ -146,33 +141,12 @@ func (t *Trie) Exists(word string) (bool, *Trie) {
 	return node.Value > 0, node
 }
 
-// trieWord is a Trie node and the word up until that node. Eg, if we were
-// storing "goodbye", the word might be "goodb" and the trie node might be
-// the letter "y". This allows us to use a queue to run a breadth first
-// search in FindCompletions
-type trieWord struct {
-	word string
-	trie *Trie
-}
-
-// Stolen from https://gist.github.com/moraes/2141121#gistcomment-1361598
-type queue []trieWord
-
-func (q *queue) Push(t trieWord) {
-	*q = append(*q, t)
-}
-
-func (q *queue) Pop() trieWord {
-	t := (*q)[0]
-	*q = (*q)[1:]
-	return t
-}
-
 type Completion struct {
 	Word string
 	Node *Trie
 }
 
+/*
 // FindCompletions does a breadth-first search below this trie node, and
 // finds up to max completed words under it.
 func (t *Trie) FindCompletions(word string, max int) []Completion {
@@ -221,64 +195,4 @@ func (t *Trie) FindCompletions(word string, max int) []Completion {
 
 	return completions
 }
-
-// ChildCount is a count of children that we can insert into a PriorityQueue
-// by implementing the PQItem interface
-type ChildCount int
-
-// FIXME: explain logic
-func (self ChildCount) PQLess(other PQItem) bool {
-	return self > other.(ChildCount)
-}
-
-func (t *Trie) countChildrenAux(pq *PriorityQueue) {
-	var children ChildCount
-	var item PQItem
-	var child *Trie
-	var err error
-
-	// Count children and children's children, recursively.
-	child = t.Child
-	for child != nil {
-		child.countChildrenAux(pq)
-		child = child.Sibling
-		children++
-	}
-
-	if pq.Size() < pq.MaxSize() || pq.IsEmpty() {
-		// If our pq isn't full, just insert the item
-		pq.Insert(children)
-	} else {
-		// Otherwise, only insert the item if it's greater than
-		// the current "max" value (actually the minimum)
-		item, err = pq.GetMax()
-		if err != nil {
-			// Since we already checked for Empty, it's a bug if we
-			// get an error here
-			log.Fatal(err)
-		}
-
-		if children > item.(ChildCount) {
-			pq.DelMax()
-			pq.Insert(children)
-		}
-	}
-}
-
-func (t *Trie) CountChildren(n int) {
-	var err error
-	var item PQItem
-
-	pq := NewPriorityQueue(n)
-
-	t.countChildrenAux(pq)
-
-	for pq.Size() > 0 {
-		item, err = pq.DelMax()
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-		fmt.Println(item)
-	}
-}
+*/
