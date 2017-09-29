@@ -5,9 +5,12 @@ import (
 	"compress/bzip2"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
+	"os"
+	"path"
 	"strings"
 	"sync"
 
@@ -19,11 +22,13 @@ const (
 	maxCompletions  = 25
 	dumpDate        = "20170820"
 	wikiIndexURL    = "http://dumps.wikimedia.your.org/%vwiki/%v/%vwiki-%v-pages-articles-multistream-index.txt.bz2"
+	localWikiDir    = "static/wikis/"
+	localIndexURL   = "http://localhost:53172/%vwiki-%v-pages-articles-multistream-index.txt.bz2"
 	streamURL       = "https://stream.wikimedia.org/v2/stream/recentchange"
 	// all wikis with at least 100k articles
-	wikiCodes = "en|ceb|sv|de|nl|fr|ru|it|es|war|pl|vi|ja|pt|zh|uk|fa|ca|ar|no|sh|fi|hu|id|ko|cs|ro|sr|ms|tr|eu|eo|bg|da|hy|sk|zh-min-nan|min|kk|he|lt|hr|ce|et|sl|be|gl|el|nn|uz|simple|la|az|ur|hi|vo|th|ka|ta"
+	wikiCodes = "en|ceb|sv|de|nl|fr|ru|it|es|war|pl|vi|ja|pt|zh|uk|fa|ca|ar|no|sh|fi|hu|id|ko|cs|ro|sr|ms|tr|eu|eo|bg|da|hy|sk|zh_min_nan|min|kk|he|lt|hr|ce|et|sl|be|gl|el|nn|uz|simple|la|az|ur|hi|vo|th|ka|ta"
 	//wikiCodes        = "simple"
-	downloadWorkers  = 5
+	downloadWorkers  = 1
 	titleField       = 3
 	streamDataPrefix = "data: "
 
@@ -101,18 +106,32 @@ func loadStream(masks map[string]int64, t *algo.Trie) {
 func download(reqs chan dlReq, t *algo.Trie) {
 
 	for req := range reqs {
-		url := fmt.Sprintf(wikiIndexURL, req.wiki, dumpDate, req.wiki, dumpDate)
+		var body io.Reader
+		localPath := path.Join(
+			localWikiDir,
+			fmt.Sprintf("%vwiki-%v-pages-articles-multistream-index.txt.bz2",
+				req.wiki, dumpDate,
+			),
+		)
+		localFile, err := os.Open(localPath)
+		if err == nil {
+			body = localFile
+			defer localFile.Close()
+			log.Printf("loading from %v", localPath)
+		} else {
+			url := fmt.Sprintf(wikiIndexURL, req.wiki, dumpDate, req.wiki, dumpDate)
 
-		log.Printf("loading from %v.wikipedia.org", req.wiki)
-
-		resp, err := http.Get(url)
-		if err != nil {
-			log.Printf("can't download %v: %v\n", url, err)
-			return
+			resp, err := http.Get(url)
+			if err != nil {
+				log.Printf("can't download %v: %v\n", url, err)
+				return
+			}
+			defer resp.Body.Close()
+			body = resp.Body
+			log.Printf("loading from %v.wikipedia.org", req.wiki)
 		}
-		defer resp.Body.Close()
 
-		s := bufio.NewScanner(bzip2.NewReader(resp.Body))
+		s := bufio.NewScanner(bzip2.NewReader(body))
 		i := 0
 		for s.Scan() {
 			parts := strings.SplitN(s.Text(), ":", titleField)
@@ -123,8 +142,6 @@ func download(reqs chan dlReq, t *algo.Trie) {
 		}
 
 		log.Printf("finished loading %v records from %v.wikipedia.org", i, req.wiki)
-		t.CountChildren(1000)
-
 	}
 }
 
