@@ -18,14 +18,15 @@ import (
 )
 
 const (
-	loadLogInterval = 1000000
-	maxCompletions  = 25
-	maxQueue        = 100
-	dumpDate        = "20170820"
-	wikiIndexURL    = "http://dumps.wikimedia.your.org/%vwiki/%v/%vwiki-%v-pages-articles-multistream-index.txt.bz2"
-	localWikiDir    = "static/wikis/"
-	localIndexURL   = "http://localhost:53172/%vwiki-%v-pages-articles-multistream-index.txt.bz2"
-	streamURL       = "https://stream.wikimedia.org/v2/stream/recentchange"
+	loadLogInterval    = 1000000
+	maxCompletions     = 25
+	maxCompletionQueue = 100
+	queueBufferSize    = 100
+	dumpDate           = "20170820"
+	wikiIndexURL       = "http://dumps.wikimedia.your.org/%vwiki/%v/%vwiki-%v-pages-articles-multistream-index.txt.bz2"
+	localWikiDir       = "static/wikis/"
+	localIndexURL      = "http://localhost:53172/%vwiki-%v-pages-articles-multistream-index.txt.bz2"
+	streamURL          = "https://stream.wikimedia.org/v2/stream/recentchange"
 	// all wikis with at least 100k articles
 	wikiCodes = "en"
 	//wikiCodes = "en|ceb|sv|de|nl|fr|ru|it|es|war|pl|vi|ja|pt|zh|uk|fa|ca|ar|no|sh|fi|hu|id|ko|cs|ro|sr|ms|tr|eu|eo|bg|da|hy|sk|zh_min_nan|min|kk|he|lt|hr|ce|et|sl|be|gl|el|nn|uz|simple|la|az|ur|hi|vo|th|ka|ta"
@@ -221,9 +222,9 @@ func main() {
 	// Create a channel to concurrently download wikis
 	dlChan := make(chan dlReq, len(wikis))
 
-	queueChan := make(chan *algo.Queue, 100)
-	for i := 0; i < 100; i++ {
-		queueChan <- algo.NewStaticQueue(100)
+	queueChan := make(chan *algo.Queue, queueBufferSize)
+	for i := 0; i < queueBufferSize; i++ {
+		queueChan <- algo.NewStaticQueue(maxCompletionQueue)
 	}
 
 	// Map wiki to a bitmask
