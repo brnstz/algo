@@ -145,10 +145,12 @@ func (t *Trie) Exists(word string) (bool, *Trie) {
 // storing "goodbye", the word might be "goodb" and the trie node might be
 // the letter "y". This allows us to use a queue to run a breadth first
 // search in FindCompletions
-type trieWord struct {
+/*
+type TrieWord struct {
 	word string
 	trie *Trie
 }
+*/
 
 type Completion struct {
 	Word string
@@ -160,32 +162,37 @@ type Completion struct {
 func (t *Trie) FindCompletions(word string, maxWords int, queues chan *Queue) []Completion {
 	var (
 		child       *Trie
-		tw          trieWord
-		tw_         interface{}
+		childWord   string
 		completions []Completion
+		tmp         interface{}
 	)
 
-	// Wait for a queue to be available from the channel
-	q := <-queues
+	// Wait for queues to be available from the channel
+	wordQ := <-queues
+	trieQ := <-queues
 	defer func() {
-		q.Reset()
-		queues <- q
+		// Reset and send queues back to channel when done
+		wordQ.Reset()
+		trieQ.Reset()
+		queues <- wordQ
+		queues <- trieQ
 	}()
 
-	// Initialize q with ourselves
-	q.Enqueue(trieWord{word: word, trie: t})
+	wordQ.Enqueue(word)
+	trieQ.Enqueue(t)
 
 	// While we still have nodes in our queue
-	for !q.IsEmpty() {
+	for !wordQ.IsEmpty() && !trieQ.IsEmpty() {
 
 		// Get the word and trie node off the queue
-		tw_, _ = q.Dequeue()
-		tw = tw_.(trieWord)
+		tmp, _ = wordQ.Dequeue()
+		word = tmp.(string)
+		tmp, _ = trieQ.Dequeue()
+		child = tmp.(*Trie).Child
 
 		// Check for children that complete a word
-		child = tw.trie.Child
 		for child != nil {
-			childWord := tw.word + string(child.Letter)
+			childWord = word + string(child.Letter)
 
 			// If it's a word, add it to our words
 			if child.Value > 0 {
@@ -201,9 +208,10 @@ func (t *Trie) FindCompletions(word string, maxWords int, queues chan *Queue) []
 				return completions
 			}
 
-			if !q.IsFull() {
-				// Add child to queue to process its children
-				q.Enqueue(trieWord{word: childWord, trie: child})
+			if !(wordQ.IsFull() || trieQ.IsFull()) {
+				// Add child to queues to process its children
+				wordQ.Enqueue(childWord)
+				trieQ.Enqueue(child)
 			}
 
 			// Try the next sibling
