@@ -157,7 +157,7 @@ type Completion struct {
 
 // FindCompletions does a breadth-first search below this trie node, and
 // finds up to max completed words under it.
-func (t *Trie) FindCompletions(word string, maxWords, maxQueue int) []Completion {
+func (t *Trie) FindCompletions(word string, maxWords int, queues chan *Queue) []Completion {
 	var (
 		child       *Trie
 		tw          trieWord
@@ -165,7 +165,12 @@ func (t *Trie) FindCompletions(word string, maxWords, maxQueue int) []Completion
 		completions []Completion
 	)
 
-	q := NewQueue()
+	// Wait for a queue to be available from the channel
+	q := <-queues
+	defer func() {
+		q.Reset()
+		queues <- q
+	}()
 
 	// Initialize q with ourselves
 	q.Enqueue(trieWord{word: word, trie: t})
@@ -196,7 +201,7 @@ func (t *Trie) FindCompletions(word string, maxWords, maxQueue int) []Completion
 				return completions
 			}
 
-			if q.Size() < maxQueue {
+			if !q.IsFull() {
 				// Add child to queue to process its children
 				q.Enqueue(trieWord{word: childWord, trie: child})
 			}

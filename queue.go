@@ -5,6 +5,7 @@ import (
 )
 
 var EmptyQueue = errors.New("queue is empty")
+var FullQueue = errors.New("queue is full")
 
 // A FIFO queue implementation using an auto-resizing array
 type Queue struct {
@@ -22,9 +23,12 @@ type Queue struct {
 
 	// Number of non-nil things on queue
 	logicalSize int
+
+	// Is this queue of a static size?
+	static bool
 }
 
-// Create a queue with this initial size
+// Create a queue
 func NewQueue() *Queue {
 	q := Queue{}
 
@@ -35,13 +39,38 @@ func NewQueue() *Queue {
 	return &q
 }
 
-// Enqueue a value
-func (q *Queue) Enqueue(val interface{}) {
+// Create a queue with static max size and no re-allocations
+func NewStaticQueue(maxSize int) *Queue {
+	q := Queue{}
 
-	// If our logical size is greater than our physical size we must resize
-	// the queue to be bigger. Double it every time we need to resize.
+	// Make a new internal queue initially of size 1
+	q.queue = make([]interface{}, maxSize)
+	q.queueSize = maxSize
+	q.static = true
+
+	return &q
+}
+
+func (q *Queue) Reset() {
+	q.enqueueIndex = 0
+	q.dequeueIndex = 0
+	q.logicalSize = 0
+}
+
+// Enqueue a value
+func (q *Queue) Enqueue(val interface{}) error {
+
 	if q.logicalSize >= q.queueSize {
-		q.resize(q.queueSize * 2)
+
+		if q.static {
+			// If we are a static queue, we can't resize
+			return FullQueue
+
+		} else {
+			// If our logical size is greater than our physical size we must resize
+			// the queue to be bigger. Double it every time we need to resize.
+			q.resize(q.queueSize * 2)
+		}
 	}
 
 	// Store the value
@@ -56,6 +85,8 @@ func (q *Queue) Enqueue(val interface{}) {
 	if q.enqueueIndex >= q.queueSize {
 		q.enqueueIndex = 0
 	}
+
+	return nil
 }
 
 // Dequeue an inten
@@ -85,7 +116,7 @@ func (q *Queue) Dequeue() (interface{}, error) {
 
 	// If our physical size is quadruple the logical size, let's resize
 	// down to twice logical size
-	if q.queueSize > (q.logicalSize * 4) {
+	if !q.static && q.queueSize > (q.logicalSize*4) {
 		q.resize(q.logicalSize * 2)
 	}
 
@@ -172,6 +203,11 @@ func (q *Queue) Size() int {
 // Is the queue empty?
 func (q *Queue) IsEmpty() bool {
 	return q.logicalSize < 1
+}
+
+// Is the queue full?
+func (q *Queue) IsFull() bool {
+	return q.logicalSize >= q.queueSize
 }
 
 // Implement AddDel interface so we can use queues and stacks with same

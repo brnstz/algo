@@ -27,8 +27,8 @@ const (
 	localIndexURL   = "http://localhost:53172/%vwiki-%v-pages-articles-multistream-index.txt.bz2"
 	streamURL       = "https://stream.wikimedia.org/v2/stream/recentchange"
 	// all wikis with at least 100k articles
-	//wikiCodes = "en"
-	wikiCodes = "en|ceb|sv|de|nl|fr|ru|it|es|war|pl|vi|ja|pt|zh|uk|fa|ca|ar|no|sh|fi|hu|id|ko|cs|ro|sr|ms|tr|eu|eo|bg|da|hy|sk|zh_min_nan|min|kk|he|lt|hr|ce|et|sl|be|gl|el|nn|uz|simple|la|az|ur|hi|vo|th|ka|ta"
+	wikiCodes = "en"
+	//wikiCodes = "en|ceb|sv|de|nl|fr|ru|it|es|war|pl|vi|ja|pt|zh|uk|fa|ca|ar|no|sh|fi|hu|id|ko|cs|ro|sr|ms|tr|eu|eo|bg|da|hy|sk|zh_min_nan|min|kk|he|lt|hr|ce|et|sl|be|gl|el|nn|uz|simple|la|az|ur|hi|vo|th|ka|ta"
 	//wikiCodes        = "simple"
 	downloadWorkers  = 1
 	titleField       = 3
@@ -156,7 +156,7 @@ func findWikis(masks map[string]int64, value int64) []string {
 	return wikis
 }
 
-func getWord(t *algo.Trie, masks map[string]int64, w http.ResponseWriter, r *http.Request) {
+func getWord(t *algo.Trie, masks map[string]int64, queueChan chan *algo.Queue, w http.ResponseWriter, r *http.Request) {
 	var node *algo.Trie
 
 	response := wordResponse{}
@@ -164,7 +164,7 @@ func getWord(t *algo.Trie, masks map[string]int64, w http.ResponseWriter, r *htt
 
 	response.Exists, node = t.Exists(word)
 	if node != nil && node.Letter != 0 {
-		rawCompletions := node.FindCompletions(word, maxCompletions, maxQueue)
+		rawCompletions := node.FindCompletions(word, maxCompletions, queueChan)
 		for _, rawCompletion := range rawCompletions {
 			completion := completion{
 				Word:  rawCompletion.Word,
@@ -221,6 +221,11 @@ func main() {
 	// Create a channel to concurrently download wikis
 	dlChan := make(chan dlReq, len(wikis))
 
+	queueChan := make(chan *algo.Queue, 100)
+	for i := 0; i < 100; i++ {
+		queueChan <- algo.NewStaticQueue(100)
+	}
+
 	// Map wiki to a bitmask
 	wikiMasks := map[string]int64{}
 
@@ -242,7 +247,7 @@ func main() {
 
 	mux := http.DefaultServeMux
 	mux.HandleFunc("/api/word", func(w http.ResponseWriter, r *http.Request) {
-		getWord(trie, wikiMasks, w, r)
+		getWord(trie, wikiMasks, queueChan, w, r)
 	})
 	mux.Handle("/", http.FileServer(http.Dir("static")))
 
