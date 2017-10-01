@@ -228,10 +228,12 @@ func main() {
 		queueChan <- algo.NewStaticQueue(maxCompletionQueue)
 	}
 
+	log.Println("initializing nodes")
 	nodeChan := make(chan *algo.Trie, nodeBufferSize)
 	for i := 0; i < nodeBufferSize; i++ {
 		nodeChan <- algo.NewTrie()
 	}
+	log.Println("done initializing nodes")
 
 	// Map wiki to a bitmask
 	wikiMasks := map[string]int64{}
