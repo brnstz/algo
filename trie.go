@@ -23,11 +23,10 @@ func NewTrie() *Trie {
 }
 
 // newTrieNode creates a new trie node.
-func newTrieNode(nodes chan *Trie, letter rune) *Trie {
-	node := <-nodes
-	node.Letter = letter
+func newTrieNode(nodes []Trie, letter rune) *Trie {
+	nodes = append(nodes, Trie{letter: letter})
 
-	return node
+	return &nodes[len(nodes)-1]
 }
 
 // findChild finds a trie node for this rune at one level below t or returns
@@ -51,7 +50,7 @@ func (t *Trie) findChild(letter rune) *Trie {
 // ensureChild ensures that a trie node for this letter exists at one level
 // below t. Returns the node itself, whether this node was newly created,
 // and how many siblings the node has.
-func (t *Trie) ensureChild(nodes chan *Trie, letter rune) (*Trie, bool, int) {
+func (t *Trie) ensureChild(nodes []Trie, letter rune) (*Trie, bool, int) {
 	var (
 		siblings int
 		newNode  bool
@@ -88,7 +87,7 @@ func (t *Trie) ensureChild(nodes chan *Trie, letter rune) (*Trie, bool, int) {
 
 // Add a word to the trie. Returns how many new nodes were created, and the
 // maximum number of siblings a node has.
-func (t *Trie) Add(nodes chan *Trie, word string, value int64) (int, int) {
+func (t *Trie) Add(nodes []Trie, word string, value int64) (int, int) {
 	var (
 		child                           *Trie
 		newNode                         bool
