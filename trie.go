@@ -2,7 +2,7 @@ package algo
 
 // Trie is a node in our Trie structure
 type Trie struct {
-	// The letter this Trie represents
+	// The letter this node represents
 	Letter rune
 
 	// Value is a bitmask that determines what we can do
@@ -23,8 +23,11 @@ func NewTrie() *Trie {
 }
 
 // newTrieNode creates a new trie node.
-func newTrieNode(letter rune) *Trie {
-	return &Trie{Letter: letter}
+func newTrieNode(nodes chan *Trie, letter rune) *Trie {
+	node := <-nodes
+	node.Letter = letter
+
+	return node
 }
 
 // findChild finds a trie node for this rune at one level below t or returns
@@ -48,7 +51,7 @@ func (t *Trie) findChild(letter rune) *Trie {
 // ensureChild ensures that a trie node for this letter exists at one level
 // below t. Returns the node itself, whether this node was newly created,
 // and how many siblings the node has.
-func (t *Trie) ensureChild(letter rune) (*Trie, bool, int) {
+func (t *Trie) ensureChild(nodes chan *Trie, letter rune) (*Trie, bool, int) {
 	var (
 		siblings int
 		newNode  bool
@@ -59,7 +62,7 @@ func (t *Trie) ensureChild(letter rune) (*Trie, bool, int) {
 
 	// If not, create a node and append it to the children list
 	if child == nil {
-		child = newTrieNode(letter)
+		child = newTrieNode(nodes, letter)
 		newNode = true
 
 		if t.Child == nil {
@@ -85,7 +88,7 @@ func (t *Trie) ensureChild(letter rune) (*Trie, bool, int) {
 
 // Add a word to the trie. Returns how many new nodes were created, and the
 // maximum number of siblings a node has.
-func (t *Trie) Add(word string, value int64) (int, int) {
+func (t *Trie) Add(nodes chan *Trie, word string, value int64) (int, int) {
 	var (
 		child                           *Trie
 		newNode                         bool
@@ -100,7 +103,7 @@ func (t *Trie) Add(word string, value int64) (int, int) {
 	for _, letter := range word {
 
 		// Create new child
-		child, newNode, siblings = node.ensureChild(letter)
+		child, newNode, siblings = node.ensureChild(nodes, letter)
 
 		// If we created a new node, record that
 		if newNode {
@@ -140,17 +143,6 @@ func (t *Trie) Exists(word string) (bool, *Trie) {
 	// If the final letter isn't a leaf node, then it isn't a word
 	return node.Value > 0, node
 }
-
-// trieWord is a Trie node and the word up until that node. Eg, if we were
-// storing "goodbye", the word might be "goodb" and the trie node might be
-// the letter "y". This allows us to use a queue to run a breadth first
-// search in FindCompletions
-/*
-type TrieWord struct {
-	word string
-	trie *Trie
-}
-*/
 
 type Completion struct {
 	Word string

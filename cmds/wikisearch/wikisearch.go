@@ -18,7 +18,9 @@ import (
 )
 
 const (
-	loadLogInterval    = 1000000
+	loadLogInterval = 1000000
+	nodeBufferSize  = 1000000000
+	//nodeBufferSize     = 100000000
 	maxCompletions     = 25
 	maxCompletionQueue = 100
 	queueBufferSize    = 100
@@ -27,10 +29,10 @@ const (
 	localWikiDir       = "static/wikis/"
 	localIndexURL      = "http://localhost:53172/%vwiki-%v-pages-articles-multistream-index.txt.bz2"
 	streamURL          = "https://stream.wikimedia.org/v2/stream/recentchange"
-	// wikiCodes = "en"
+	//wikiCodes          = "en"
 	// all wikis with at least 100k articles
 	wikiCodes        = "en|ceb|sv|de|nl|fr|ru|it|es|war|pl|vi|ja|pt|zh|uk|fa|ca|ar|no|sh|fi|hu|id|ko|cs|ro|sr|ms|tr|eu|eo|bg|da|hy|sk|zh_min_nan|min|kk|he|lt|hr|ce|et|sl|be|gl|el|nn|uz|simple|la|az|ur|hi|vo|th|ka|ta"
-	downloadWorkers  = 10
+	downloadWorkers  = 3
 	titleField       = 3
 	streamDataPrefix = "data: "
 )
@@ -55,7 +57,7 @@ type wikiStream struct {
 	ServerName string `json:"server_name"`
 }
 
-func loadStream(masks map[string]int64, t *algo.Trie) {
+func loadStream(masks map[string]int64, t *algo.Trie, nodeChan chan *algo.Trie) {
 	var ws wikiStream
 
 	// Continue forever if we are disconnected
@@ -96,14 +98,14 @@ func loadStream(masks map[string]int64, t *algo.Trie) {
 						continue
 					}
 
-					add(t, ws.Title, mask)
+					add(t, nodeChan, ws.Title, mask)
 				}
 			}
 		}()
 	}
 }
 
-func download(reqs chan dlReq, t *algo.Trie) {
+func download(reqs chan dlReq, t *algo.Trie, nodeChan chan *algo.Trie) {
 
 	for req := range reqs {
 		var body io.Reader
@@ -136,7 +138,7 @@ func download(reqs chan dlReq, t *algo.Trie) {
 		for s.Scan() {
 			parts := strings.SplitN(s.Text(), ":", titleField)
 			if len(parts) == titleField {
-				add(t, parts[titleField-1], req.mask)
+				add(t, nodeChan, parts[titleField-1], req.mask)
 			}
 			i++
 		}
@@ -193,13 +195,13 @@ var (
 	totalNodes, totalLetters, nodes, letters, titles int
 )
 
-func add(t *algo.Trie, title string, mask int64) {
+func add(t *algo.Trie, nodeChan chan *algo.Trie, title string, mask int64) {
 	// Add to our trie
 	writeLock.Lock()
 
 	titles += 1
 	totalLetters += len(title)
-	nodes, _ = t.Add(title, mask)
+	nodes, _ = t.Add(nodeChan, title, mask)
 	totalNodes += nodes
 
 	if titles%loadLogInterval == 0 {
@@ -226,6 +228,11 @@ func main() {
 		queueChan <- algo.NewStaticQueue(maxCompletionQueue)
 	}
 
+	nodeChan := make(chan *algo.Trie, nodeBufferSize)
+	for i := 0; i < nodeBufferSize; i++ {
+		nodeChan <- algo.NewTrie()
+	}
+
 	// Map wiki to a bitmask
 	wikiMasks := map[string]int64{}
 
@@ -239,11 +246,11 @@ func main() {
 
 	// Create concurrent workers
 	for i := 0; i < downloadWorkers; i++ {
-		go download(dlChan, trie)
+		go download(dlChan, trie, nodeChan)
 	}
 
 	// Load the live stream
-	//go loadStream(wikiMasks, trie)
+	go loadStream(wikiMasks, trie, nodeChan)
 
 	mux := http.DefaultServeMux
 	mux.HandleFunc("/api/word", func(w http.ResponseWriter, r *http.Request) {
