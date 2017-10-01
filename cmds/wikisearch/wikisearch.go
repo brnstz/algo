@@ -57,7 +57,7 @@ type wikiStream struct {
 	ServerName string `json:"server_name"`
 }
 
-func loadStream(masks map[string]int64, t *algo.Trie, nodeBuffer []algo.Trie) {
+func loadStream(masks map[string]int64, t *algo.Trie, nodeBuffer []algo.Trie, nodeIndex *int) {
 	var ws wikiStream
 
 	// Continue forever if we are disconnected
@@ -98,14 +98,14 @@ func loadStream(masks map[string]int64, t *algo.Trie, nodeBuffer []algo.Trie) {
 						continue
 					}
 
-					add(t, nodeBuffer, ws.Title, mask)
+					add(t, nodeBuffer, nodeIndex, ws.Title, mask)
 				}
 			}
 		}()
 	}
 }
 
-func download(reqs chan dlReq, t *algo.Trie, nodeBuffer []algo.Trie) {
+func download(reqs chan dlReq, t *algo.Trie, nodeBuffer []algo.Trie, nodeIndex *int) {
 
 	for req := range reqs {
 		var body io.Reader
@@ -138,7 +138,7 @@ func download(reqs chan dlReq, t *algo.Trie, nodeBuffer []algo.Trie) {
 		for s.Scan() {
 			parts := strings.SplitN(s.Text(), ":", titleField)
 			if len(parts) == titleField {
-				add(t, nodeBuffer, parts[titleField-1], req.mask)
+				add(t, nodeBuffer, nodeIndex, parts[titleField-1], req.mask)
 			}
 			i++
 		}
@@ -195,13 +195,13 @@ var (
 	totalNodes, totalLetters, nodes, letters, titles int
 )
 
-func add(t *algo.Trie, nodeBuffer []algo.Trie, title string, mask int64) {
+func add(t *algo.Trie, nodeBuffer []algo.Trie, nodeIndex *int, title string, mask int64) {
 	// Add to our trie
 	writeLock.Lock()
 
 	titles += 1
 	totalLetters += len(title)
-	nodes, _ = t.Add(nodeBuffer, title, mask)
+	nodes, _ = t.Add(nodeBuffer, nodeIndex, title, mask)
 	totalNodes += nodes
 
 	if titles%loadLogInterval == 0 {
@@ -229,8 +229,8 @@ func main() {
 	}
 
 	log.Println("initializing nodes")
-	nodeBuffer := make([]algo.Trie, 0, nodeBufferSize)
-	//nodeIndex := make([]algo.Trie, nodeBufferSize)
+	nodeBuffer := make([]algo.Trie, nodeBufferSize)
+	nodeIndex := 0
 	log.Println("done initializing nodes")
 
 	// Map wiki to a bitmask
@@ -246,11 +246,11 @@ func main() {
 
 	// Create concurrent workers
 	for i := 0; i < downloadWorkers; i++ {
-		go download(dlChan, trie, nodeBuffer)
+		go download(dlChan, trie, nodeBuffer, &nodeIndex)
 	}
 
 	// Load the live stream
-	go loadStream(wikiMasks, trie, nodeBuffer)
+	go loadStream(wikiMasks, trie, nodeBuffer, &nodeIndex)
 
 	mux := http.DefaultServeMux
 	mux.HandleFunc("/api/word", func(w http.ResponseWriter, r *http.Request) {
