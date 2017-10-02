@@ -148,7 +148,7 @@ func download(reqs chan dlReq, t *algo.Trie, nodeBuffer []algo.Trie, nodeIndex *
 }
 
 func findWikis(masks map[string]int64, value int64) []string {
-	var wikis []string
+	wikis := make([]string, 0, 64)
 	for wiki, mask := range masks {
 		if mask&value == mask {
 			wikis = append(wikis, wiki)
