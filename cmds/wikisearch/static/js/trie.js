@@ -3,6 +3,7 @@ var EXISTS_COLOR = "#000000";
 var WIKI_ROOT = "https://en.wikipedia.org/wiki/";
 var SEARCHBOX = document.getElementById("searchbox");
 var COMPLETIONS = document.getElementById("completions");
+var MIN_LENGTH = 3;
 
 SEARCHBOX.addEventListener("input", inputChange);
 SEARCHBOX.addEventListener("keypress", goToFirstLink);
@@ -67,5 +68,9 @@ function inputChange(e) {
     var word = e.srcElement.value;
     var searchbox = e.srcElement;
     var completions = document.getElementById("completions");
-    callAPI(word, searchbox, completions);
+    if (word.length > MIN_LENGTH) {
+        callAPI(word, searchbox, completions);
+    } else {
+        completions.innerHTML = "";
+    }
 }
