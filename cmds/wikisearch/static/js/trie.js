@@ -4,6 +4,7 @@ var WIKI_ROOT = "https://en.wikipedia.org/wiki/";
 var SEARCHBOX = document.getElementById("searchbox");
 var COMPLETIONS = document.getElementById("completions");
 var MIN_LENGTH = 0;
+var MAX_COMPLETIONS = 50;
 
 SEARCHBOX.addEventListener("input", inputChange);
 SEARCHBOX.addEventListener("keypress", goToFirstLink);
@@ -34,6 +35,7 @@ function callAPI(word, searchbox, completions) {
 
 	xhr.onload = function() {
         var r = xhr.response;
+        var count = 0;
 
         // Set color of the input text box
         if (r.exists) {
@@ -49,13 +51,15 @@ function callAPI(word, searchbox, completions) {
             for (i = 0; i < r.wikis.length; i++) {
                 completions.innerHTML += createWikiLink(word, r.wikis[i]) + "<br>";
             }
+            count++;
         }
 
         // List our auto-completions
-        if (r.completions != null && word.length > 0) {
+        if (r.completions != null && word.length > 0 && count < MAX_COMPLETIONS) {
             for (i = 0; i < r.completions.length; i++) {
                 for (j = 0; j < r.completions[i].wikis.length; j++) {
                     completions.innerHTML += createWikiLink(r.completions[i].word, r.completions[i].wikis[j]) + "<br>";
+                    count++;
                 }
             }
         }
