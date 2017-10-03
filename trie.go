@@ -184,8 +184,8 @@ func (t *Trie) FindCompletions(word string, maxWords int, queues chan *Queue) []
 		trieQ := NewStaticQueue(100)
 	*/
 
-	wordQ := StaticQueue()
-	trieQ := StaticQueue()
+	wordQ := NewQueue()
+	trieQ := NewQueue()
 
 	// While we still have nodes in our queue
 	for !wordQ.IsEmpty() && !trieQ.IsEmpty() {
