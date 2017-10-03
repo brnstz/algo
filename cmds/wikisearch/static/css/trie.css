@@ -5,7 +5,7 @@ body, input {
     text-align: center;
 }
 
-a:link{color:inherit}
-a:active{color:inherit}
-a:visited{color:inherit}
-a:hover{color:inherit}
+a:link{color:#0000EE}
+a:active{color:#EE0000}
+a:visited{color:#0000EE}
+a:hover{color:#0000EE}
