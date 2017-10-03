@@ -55,9 +55,9 @@ function callAPI(word, searchbox, completions) {
         }
 
         // List our auto-completions
-        if (r.completions != null && word.length > 0 && count < MAX_COMPLETIONS) {
-            for (i = 0; i < r.completions.length; i++) {
-                for (j = 0; j < r.completions[i].wikis.length; j++) {
+        if (r.completions != null && word.length > 0) {
+            for (i = 0; i < r.completions.length && count < MAX_COMPLETIONS; i++) {
+                for (j = 0; j < r.completions[i].wikis.length && count < MAX_COMPLETIONS; j++) {
                     completions.innerHTML += createWikiLink(r.completions[i].word, r.completions[i].wikis[j]) + "<br>";
                     count++;
                 }
