@@ -19,8 +19,8 @@ import (
 
 const (
 	loadLogInterval = 1000000
-	nodeBufferSize  = 750000000
-	//nodeBufferSize     = 100000000
+	//nodeBufferSize  = 750000000
+	nodeBufferSize     = 1
 	maxCompletions     = 25
 	maxCompletionQueue = 100
 	queueBufferSize    = 100

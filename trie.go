@@ -24,11 +24,14 @@ func NewTrie() *Trie {
 
 // newTrieNode creates a new trie node.
 func newTrieNode(nodes []Trie, nodeIndex *int, letter rune) *Trie {
-	nodes[*nodeIndex].Letter = letter
+	/*
+		nodes[*nodeIndex].Letter = letter
 
-	*nodeIndex++
+		*nodeIndex++
 
-	return &nodes[*nodeIndex-1]
+		return &nodes[*nodeIndex-1]
+	*/
+	return &Trie{Letter: letter}
 }
 
 // findChild finds a trie node for this rune at one level below t or returns
