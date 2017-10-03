@@ -3,7 +3,7 @@ var EXISTS_COLOR = "#000000";
 var WIKI_ROOT = "https://en.wikipedia.org/wiki/";
 var SEARCHBOX = document.getElementById("searchbox");
 var COMPLETIONS = document.getElementById("completions");
-var MIN_LENGTH = 3;
+var MIN_LENGTH = 0;
 
 SEARCHBOX.addEventListener("input", inputChange);
 SEARCHBOX.addEventListener("keypress", goToFirstLink);
