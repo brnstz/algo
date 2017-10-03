@@ -4,3 +4,8 @@ body, input {
     margin:50 auto;
     text-align: center;
 }
+
+a:link{color:inherit}
+a:active{color:inherit}
+a:visited{color:inherit}
+a:hover{color:inherit}
