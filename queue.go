@@ -207,7 +207,7 @@ func (q *Queue) IsEmpty() bool {
 
 // Is the queue full?
 func (q *Queue) IsFull() bool {
-	return q.logicalSize >= q.queueSize
+	return q.static && q.logicalSize >= q.queueSize
 }
 
 // Implement AddDel interface so we can use queues and stacks with same
