@@ -164,18 +164,23 @@ func (t *Trie) FindCompletions(word string, maxWords int, queues chan *Queue) []
 	)
 
 	// Wait for queues to be available from the channel
-	wordQ := <-queues
-	trieQ := <-queues
-	defer func() {
-		// Reset and send queues back to channel when done
-		wordQ.Reset()
-		trieQ.Reset()
-		queues <- wordQ
-		queues <- trieQ
-	}()
+	/*
+		wordQ := <-queues
+		trieQ := <-queues
+		defer func() {
+			// Reset and send queues back to channel when done
+			wordQ.Reset()
+			trieQ.Reset()
+			queues <- wordQ
+			queues <- trieQ
+		}()
 
-	wordQ.Enqueue(word)
-	trieQ.Enqueue(t)
+		wordQ.Enqueue(word)
+		trieQ.Enqueue(t)
+	*/
+
+	wordQ := NewStaticQueue(100)
+	trieQ := NewStaticQueue(100)
 
 	// While we still have nodes in our queue
 	for !wordQ.IsEmpty() && !trieQ.IsEmpty() {
