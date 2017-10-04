@@ -162,7 +162,6 @@ func (q *Queue) resize(newSize int) {
 
 		// If old queue val is nil, we've reached a gap
 		// and therefore can stop copying
-		//log.Printf("%v %v", q, i)
 		if q.queue[i] == nil {
 			break
 		}
