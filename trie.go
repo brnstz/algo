@@ -23,14 +23,7 @@ func NewTrie() *Trie {
 }
 
 // newTrieNode creates a new trie node.
-func newTrieNode(nodes []Trie, nodeIndex *int, letter rune) *Trie {
-	/*
-		nodes[*nodeIndex].Letter = letter
-
-		*nodeIndex++
-
-		return &nodes[*nodeIndex-1]
-	*/
+func newTrieNode(letter rune) *Trie {
 	return &Trie{Letter: letter}
 }
 
@@ -55,7 +48,7 @@ func (t *Trie) findChild(letter rune) *Trie {
 // ensureChild ensures that a trie node for this letter exists at one level
 // below t. Returns the node itself, whether this node was newly created,
 // and how many siblings the node has.
-func (t *Trie) ensureChild(nodes []Trie, nodeIndex *int, letter rune) (*Trie, bool, int) {
+func (t *Trie) ensureChild(letter rune) (*Trie, bool, int) {
 	var (
 		siblings int
 		newNode  bool
@@ -66,7 +59,7 @@ func (t *Trie) ensureChild(nodes []Trie, nodeIndex *int, letter rune) (*Trie, bo
 
 	// If not, create a node and append it to the children list
 	if child == nil {
-		child = newTrieNode(nodes, nodeIndex, letter)
+		child = newTrieNode(letter)
 		newNode = true
 
 		if t.Child == nil {
@@ -92,7 +85,7 @@ func (t *Trie) ensureChild(nodes []Trie, nodeIndex *int, letter rune) (*Trie, bo
 
 // Add a word to the trie. Returns how many new nodes were created, and the
 // maximum number of siblings a node has.
-func (t *Trie) Add(nodes []Trie, nodeIndex *int, word string, value int64) (int, int) {
+func (t *Trie) Add(word string, value int64) (int, int) {
 	var (
 		child                           *Trie
 		newNode                         bool
@@ -107,7 +100,7 @@ func (t *Trie) Add(nodes []Trie, nodeIndex *int, word string, value int64) (int,
 	for _, letter := range word {
 
 		// Create new child
-		child, newNode, siblings = node.ensureChild(nodes, nodeIndex, letter)
+		child, newNode, siblings = node.ensureChild(letter)
 
 		// If we created a new node, record that
 		if newNode {
@@ -155,32 +148,13 @@ type Completion struct {
 
 // FindCompletions does a breadth-first search below this trie node, and
 // finds up to max completed words under it.
-func (t *Trie) FindCompletions(word string, maxWords int, queues chan *Queue) []Completion {
+func (t *Trie) FindCompletions(word string, maxWords int) []Completion {
 	var (
 		child       *Trie
 		childWord   string
 		completions []Completion
 		tmp         interface{}
 	)
-
-	// Wait for queues to be available from the channel
-	/*
-		wordQ := <-queues
-		trieQ := <-queues
-		defer func() {
-			// Reset and send queues back to channel when done
-			wordQ.Reset()
-			trieQ.Reset()
-			queues <- wordQ
-			queues <- trieQ
-		}()
-
-	*/
-
-	/*
-		wordQ := NewStaticQueue(100)
-		trieQ := NewStaticQueue(100)
-	*/
 
 	wordQ := NewQueue()
 	trieQ := NewQueue()
