@@ -2,8 +2,6 @@ var NOT_EXISTS_COLOR = "#CC0000";
 var EXISTS_COLOR = "#000000";
 var WIKI_ROOT = "https://en.wikipedia.org/wiki/";
 var SEARCHBOX = document.getElementById("searchbox");
-var COMPLETIONS = document.getElementById("completions");
-var DETAILS = document.getElementById("details");
 var MIN_LENGTH = 0;
 var MAX_COMPLETIONS = 50;
 
@@ -12,7 +10,7 @@ SEARCHBOX.addEventListener("keypress", goToFirstLink);
 SEARCHBOX.focus();
 
 if (SEARCHBOX.value.length > 0) {
-    callAPI(SEARCHBOX.value, SEARCHBOX, COMPLETIONS);
+    callAPI(SEARCHBOX.value);
 }
 
 function createWikiLink(word, wiki) {
@@ -27,9 +25,12 @@ function goToFirstLink(e) {
     return false;
 }
 
-function callAPI(word, searchbox, completions) {
+function callAPI(word) {
 	var xhr = new XMLHttpRequest();
 	var url = "/api/word?word=" + encodeURIComponent(word);
+    var details = document.getElementById("details");
+    var completions = document.getElementById("completions");
+    var searchbox = document.getElementById("searchbox");
 
 	xhr.open("GET", url);
 	xhr.responseType = "json";
@@ -65,7 +66,7 @@ function callAPI(word, searchbox, completions) {
             }
         }
 
-        details.innerHTML = "Searched " + r.titles.toLocaleString() +
+        details.innerHTML = "Searched " + r.titles.toLocaleString() + 
             " titles with " + r.letters.toLocaleString() +
             " letters stored in " + r.nodes.toLocaleString() +
             " nodes in " + r.time;
@@ -76,11 +77,14 @@ function callAPI(word, searchbox, completions) {
 
 function inputChange(e) {
     var word = e.srcElement.value;
-    var searchbox = e.srcElement;
+    //var searchbox = e.srcElement;
     var completions = document.getElementById("completions");
+    var details = document.getElementById("details");
+
     if (word.length > MIN_LENGTH) {
-        callAPI(word, searchbox, completions);
+        callAPI(word);
     } else {
-        completions.innerHTML = "";
+        completions.innerHTML = "&nbsp;";
+        details.innerHTML = "&nbsp;";
     }
 }
