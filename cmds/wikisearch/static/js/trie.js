@@ -3,6 +3,7 @@ var EXISTS_COLOR = "#000000";
 var WIKI_ROOT = "https://en.wikipedia.org/wiki/";
 var SEARCHBOX = document.getElementById("searchbox");
 var COMPLETIONS = document.getElementById("completions");
+var DETAILS = document.getElementById("details");
 var MIN_LENGTH = 0;
 var MAX_COMPLETIONS = 50;
 
@@ -63,6 +64,11 @@ function callAPI(word, searchbox, completions) {
                 }
             }
         }
+
+        details.innerHTML = "Searched " + r.titles.toLocaleString() +
+            " titles with " + r.letters.toLocaleString() +
+            " letters stored in " + r.nodes.toLocaleString() +
+            " nodes in " + r.time;
         
 	};
     xhr.send();

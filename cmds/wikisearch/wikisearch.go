@@ -13,6 +13,7 @@ import (
 	"path"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/brnstz/algo"
 )
@@ -45,6 +46,10 @@ type wordResponse struct {
 	Exists      bool         `json:"exists"`
 	Completions []completion `json:"completions"`
 	Wikis       []string     `json:"wikis"`
+	Nodes       int          `json:"nodes"`
+	Titles      int          `json:"titles"`
+	Letters     int          `json:"letters"`
+	Time        string       `json:"time"`
 }
 
 type dlReq struct {
@@ -160,8 +165,13 @@ func findWikis(masks map[string]int64, value int64) []string {
 
 func getWord(t *algo.Trie, masks map[string]int64, queueChan chan *algo.Queue, w http.ResponseWriter, r *http.Request) {
 	var node *algo.Trie
+	t1 := time.Now()
 
-	response := wordResponse{}
+	response := wordResponse{
+		Titles:  titles,
+		Nodes:   totalNodes,
+		Letters: totalLetters,
+	}
 	word := r.FormValue("word")
 
 	response.Exists, node = t.Exists(word)
@@ -179,6 +189,8 @@ func getWord(t *algo.Trie, masks map[string]int64, queueChan chan *algo.Queue, w
 	if node != nil {
 		response.Wikis = findWikis(masks, node.Value)
 	}
+
+	response.Time = fmt.Sprintf("%v", time.Now().Sub(t1))
 
 	b, err := json.Marshal(response)
 	if err != nil {

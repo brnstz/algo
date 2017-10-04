@@ -1,8 +1,23 @@
+body {
+    margin: 50 auto;
+}
+
 body, input {
     font-family: Helvetica;
     font-size: 25px;
-    margin:50 auto;
     text-align: center;
+}
+
+input {
+    margin: 25 auto;
+}
+
+#details {
+    font-family: Helvetica;
+    font-style: italic;
+    font-size: 16px;
+    text-align: center;
+    margin: 5 auto;
 }
 
 a:link{color:#0000EE}
