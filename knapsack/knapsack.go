@@ -61,10 +61,54 @@ func Bounded(items []Item, maxWeight int) Solution {
 				// Otherwise, use the solution that didn't consider this
 				// item.
 				solutions[i][weight] = lastSolution
-
 			}
 		}
 	}
 
 	return solutions[len(items)-1][maxWeight]
+}
+
+// Unbounded finds a Solution of max value given maxWeight, assuming
+// we can use each Item unlimited times.
+func Unbounded(items []Item, maxWeight int) Solution {
+	var withoutSolution Solution
+
+	// solutions is a one dimensional array, mapping the max weight
+	// to its optimal solution.
+	solutions := make([]Solution, maxWeight+1)
+
+	for weight := 0; weight <= maxWeight; weight++ {
+		for i, item := range items {
+
+			// If this item	can possibly fit into weight, then
+			// consider it
+			if item.Weight <= weight {
+
+				// What is the solution without this item's weight?
+				withoutSolution = solutions[weight-item.Weight]
+
+				// What is the potential value we can add with this item?
+				potentialValue := withoutSolution.Value + item.Value
+
+				if potentialValue > solutions[weight].Value {
+					// If the potentialValue is greater than current, let's
+					// choose it.
+
+					// Reset this solution's items and copy from source
+					// solution.
+					solutions[weight].Items = map[int]int{}
+					for k, v := range withoutSolution.Items {
+						solutions[weight].Items[k] = v
+					}
+
+					// Increment the number of times we use this item and
+					// save our new value.
+					solutions[weight].Items[i]++
+					solutions[weight].Value = potentialValue
+				}
+			}
+		}
+	}
+
+	return solutions[maxWeight]
 }
