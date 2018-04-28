@@ -2,6 +2,7 @@ package huffman
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 
 	"github.com/brnstz/algo"
@@ -24,8 +25,8 @@ type node struct {
 
 // PQLess for a node considers the item with larger frequency to have less
 // priority. We want to pop them off from least frequest to most.
-func (n node) PQLess(other algo.PQItem) bool {
-	otherN := other.(node)
+func (n *node) PQLess(other algo.PQItem) bool {
+	otherN := other.(*node)
 
 	return n.freq > otherN.freq
 }
@@ -33,29 +34,69 @@ func (n node) PQLess(other algo.PQItem) bool {
 // Coder is a Huffman encoder/decoder
 type Coder struct {
 	valueType int
-	root      node
+	root      *node
 	r         *bufio.Reader
+	rs        io.ReadSeeker
+	codeTable map[interface{}]encoding
+}
+
+type encoding struct {
+	code   uint64
+	bitLen uint
 }
 
 // NewCoder creates a Coder instance that reads from r interpreting values as
 // either Binary or Rune
-func NewCoder(valueType int, r io.Reader) (Coder, error) {
+func NewCoder(valueType int, r io.ReadSeeker) (Coder, error) {
 	var err error
 
 	c := Coder{
 		valueType: valueType,
 		r:         bufio.NewReader(r),
+		rs:        r,
+		codeTable: map[interface{}]encoding{},
 	}
 
-	freqs, err := c.createFreq(r)
+	freqs, err := c.createFreq()
 	if err != nil {
 		return c, err
 	}
 
-	c.root, err = c.buildTree(freqs)
+	c.root, err = c.createTree(freqs)
+
+	c.createCodeTable(c.root, 0, 0)
+
+	for k, v := range c.codeTable {
+		fmt.Printf("%v => {%b %v}\n", k, v.code, v.bitLen)
+	}
 
 	return c, err
 }
+
+// Encode writes Huffman encoded data to w
+/*
+func (c Coder) Encode(w io.Writer) error {
+	var (
+		err error
+		v   interface{}
+	)
+
+	// Seek to start of file
+	c.rs.Seek(0, io.SeekStart)
+	c.r.Reset(c.rs)
+
+	for err == nil {
+		v, err = c.getNext()
+	}
+
+	// Ignore EOF error
+	if err == io.EOF {
+		err = nil
+	}
+
+	return err
+}
+*/
 
 // getNext gets the next value from the stream, depending on the value type
 func (c Coder) getNext() (interface{}, error) {
@@ -79,7 +120,7 @@ func (c Coder) getNext() (interface{}, error) {
 
 // createFreq reads the incoming stream and creates a mapping of values
 // to frequency counts
-func (c Coder) createFreq(r io.Reader) (map[interface{}]int, error) {
+func (c Coder) createFreq() (map[interface{}]int, error) {
 	var (
 		v   interface{}
 		err error
@@ -102,11 +143,11 @@ func (c Coder) createFreq(r io.Reader) (map[interface{}]int, error) {
 	return freqs, err
 }
 
-// buildTree accepts the frequency count and builds our Huffman tree
-func (c Coder) buildTree(freqs map[interface{}]int) (node, error) {
+// createTree accepts the frequency count and builds our Huffman tree
+func (c Coder) createTree(freqs map[interface{}]int) (*node, error) {
 	var (
 		pqItem         algo.PQItem
-		parent, n1, n2 node
+		parent, n1, n2 *node
 		err            error
 	)
 
@@ -114,7 +155,7 @@ func (c Coder) buildTree(freqs map[interface{}]int) (node, error) {
 
 	// Create a node for each value and put it into a priority queue
 	for v, freq := range freqs {
-		n := node{
+		n := &node{
 			freq:  freq,
 			value: v,
 		}
@@ -125,25 +166,28 @@ func (c Coder) buildTree(freqs map[interface{}]int) (node, error) {
 		}
 	}
 
+	// While we still have at least two items, take them and merge
 	for pq.Size() > 1 {
-		// While we still have at least two items, take them and merge
 		pqItem, err = pq.DelMax()
 		if err != nil {
 			return parent, err
 		}
-		n1 = pqItem.(node)
+		n1 = pqItem.(*node)
 
 		pqItem, err = pq.DelMax()
 		if err != nil {
 			return parent, err
 		}
-		n2 = pqItem.(node)
+		n2 = pqItem.(*node)
 
-		parent = node{
+		// Create a null node with each of these children
+		// as different paths. Null nodes allow us to be
+		// prefix free.
+		parent = &node{
 			value: 0,
 			freq:  n1.freq + n2.freq,
-			left:  &n1,
-			right: &n2,
+			left:  n1,
+			right: n2,
 		}
 
 		err = pq.Insert(parent)
@@ -159,8 +203,31 @@ func (c Coder) buildTree(freqs map[interface{}]int) (node, error) {
 			return parent, err
 		}
 
-		parent = pqItem.(node)
+		parent = pqItem.(*node)
 	}
 
 	return parent, nil
+}
+
+func (c Coder) createCodeTable(n *node, code uint64, bitLen uint) {
+	//fmt.Println(n.value, n.freq, n.left, n.right, code, bitLen)
+
+	// If there is not a null value node, then record its code
+	if n.value != 0 {
+		c.codeTable[n.value] = encoding{
+			code:   code,
+			bitLen: bitLen,
+		}
+	}
+
+	// Recurse left and right
+	if n.left != nil {
+		// Left means "0" so just increase the bit length
+		c.createCodeTable(n.left, code, bitLen+1)
+	}
+
+	if n.right != nil {
+		// Right means "1" so add a 1 bit at the new bitLen
+		c.createCodeTable(n.right, code|1<<bitLen+1, bitLen+1)
+	}
 }
