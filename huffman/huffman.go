@@ -74,11 +74,12 @@ func NewCoder(valueType int, r io.ReadSeeker) (Coder, error) {
 }
 
 // Encode writes Huffman encoded data to w
-/*
 func (c Coder) Encode(w io.Writer) error {
 	var (
 		err error
 		v   interface{}
+		enc encoding
+		ok  bool
 	)
 
 	// Seek to start of file
@@ -87,6 +88,13 @@ func (c Coder) Encode(w io.Writer) error {
 
 	for err == nil {
 		v, err = c.getNext()
+
+		enc, ok = c.codeTable[v]
+		if !ok {
+			return fmt.Errorf("invalid encoding, unable to find char")
+		}
+
+		fmt.Println(enc)
 	}
 
 	// Ignore EOF error
@@ -96,7 +104,6 @@ func (c Coder) Encode(w io.Writer) error {
 
 	return err
 }
-*/
 
 // getNext gets the next value from the stream, depending on the value type
 func (c Coder) getNext() (interface{}, error) {

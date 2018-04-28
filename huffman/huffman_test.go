@@ -1,7 +1,6 @@
 package huffman_test
 
 import (
-	"log"
 	"os"
 	"testing"
 
@@ -20,5 +19,5 @@ func TestHuffman(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	log.Println(huff)
+	huff.Encode(os.Stdout)
 }
