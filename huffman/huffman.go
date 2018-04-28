@@ -18,45 +18,59 @@ type node struct {
 	freq  int
 	value interface{}
 
-	left  node
-	right node
+	left  *node
+	right *node
 }
 
 // PQLess for a node considers the item with larger frequency to have less
 // priority. We want to pop them off from least frequest to most.
-func (n node) PQLess(other algo.PQItem) {
+func (n node) PQLess(other algo.PQItem) bool {
 	otherN := other.(node)
 
-	return n.freq > other.freq
+	return n.freq > otherN.freq
 }
 
 // Coder is a Huffman encoder/decoder
 type Coder struct {
-	ValueType int
+	valueType int
 	root      node
-	r         bufio.Reader
+	r         *bufio.Reader
 }
 
 // NewCoder creates a Coder instance that reads from r interpreting values as
 // either Binary or Rune
-func NewCoder(valueType int, r io.Reader) Coder {
+func NewCoder(valueType int, r io.Reader) (Coder, error) {
+	var err error
+
 	c := Coder{
-		ValueType: valueType,
+		valueType: valueType,
 		r:         bufio.NewReader(r),
 	}
 
-	return c
+	freqs, err := c.createFreq(r)
+	if err != nil {
+		return c, err
+	}
+
+	c.root, err = c.buildTree(freqs)
+
+	return c, err
 }
 
 // getNext gets the next value from the stream, depending on the value type
-func (c Coder) getNext() (interface{}, err) {
+func (c Coder) getNext() (interface{}, error) {
+	var (
+		err error
+		v   interface{}
+	)
+
 	switch c.valueType {
 
 	case Binary:
-		v, err := c.r.ReadByte()
+		v, err = c.r.ReadByte()
 
 	case Rune:
-		v, _, err := r.ReadRune()
+		v, _, err = c.r.ReadRune()
 
 	}
 
@@ -85,15 +99,15 @@ func (c Coder) createFreq(r io.Reader) (map[interface{}]int, error) {
 		err = nil
 	}
 
-	return freq, error
+	return freqs, err
 }
 
-// buildTrie accepts the frequency count and builds our Huffman tree
-func (c Coder) buildTrie(freqs map[interface{}]int) (node, error) {
+// buildTree accepts the frequency count and builds our Huffman tree
+func (c Coder) buildTree(freqs map[interface{}]int) (node, error) {
 	var (
 		pqItem         algo.PQItem
-		err            error
 		parent, n1, n2 node
+		err            error
 	)
 
 	pq := algo.NewPriorityQueue(len(freqs))
@@ -113,13 +127,13 @@ func (c Coder) buildTrie(freqs map[interface{}]int) (node, error) {
 
 	for pq.Size() > 1 {
 		// While we still have at least two items, take them and merge
-		pqItem, err := pq.DelMax()
+		pqItem, err = pq.DelMax()
 		if err != nil {
 			return parent, err
 		}
 		n1 = pqItem.(node)
 
-		pqItem, err := pq.DelMax()
+		pqItem, err = pq.DelMax()
 		if err != nil {
 			return parent, err
 		}
@@ -128,8 +142,8 @@ func (c Coder) buildTrie(freqs map[interface{}]int) (node, error) {
 		parent = node{
 			value: 0,
 			freq:  n1.freq + n2.freq,
-			left:  n1,
-			right: n2,
+			left:  &n1,
+			right: &n2,
 		}
 
 		err = pq.Insert(parent)
@@ -138,6 +152,7 @@ func (c Coder) buildTrie(freqs map[interface{}]int) (node, error) {
 		}
 	}
 
+	// Add the final, highest priority node as root
 	if !pq.IsEmpty() {
 		pqItem, err := pq.DelMax()
 		if err != nil {
