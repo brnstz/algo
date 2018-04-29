@@ -266,6 +266,7 @@ func (c Coder) createTree(freqs map[interface{}]int) (*node, error) {
 
 func (c Coder) createCodeTable(n *node, code uint64, bitLen uint) {
 	//fmt.Println(n.value, n.freq, n.left, n.right, code, bitLen)
+	fmt.Printf("%v %c %b %v\n", n.value, n.value, code, bitLen)
 
 	// If there is not a null value node, then record its code
 	if n.value != 0 {
@@ -283,6 +284,6 @@ func (c Coder) createCodeTable(n *node, code uint64, bitLen uint) {
 
 	if n.right != nil {
 		// Right means "1" so add a 1 bit at the new bitLen
-		c.createCodeTable(n.right, code|1<<bitLen+1, bitLen+1)
+		c.createCodeTable(n.right, code|1<<(bitLen+1), bitLen+1)
 	}
 }
