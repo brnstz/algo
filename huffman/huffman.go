@@ -8,6 +8,8 @@ import (
 	"github.com/brnstz/algo"
 )
 
+const byteSize = 8
+
 const (
 	// Binary reads the incoming stream as 8-bit values
 	Binary = iota
@@ -76,25 +78,60 @@ func NewCoder(valueType int, r io.ReadSeeker) (Coder, error) {
 // Encode writes Huffman encoded data to w
 func (c Coder) Encode(w io.Writer) error {
 	var (
-		err error
-		v   interface{}
-		enc encoding
-		ok  bool
+		err  error
+		v    interface{}
+		enc  encoding
+		ok   bool
+		b    byte
+		bpos uint
+		epos uint
 	)
 
 	// Seek to start of file
 	c.rs.Seek(0, io.SeekStart)
 	c.r.Reset(c.rs)
 
+	bw := bufio.NewWriter(w)
+
 	for err == nil {
+		// Reset the position we starting on the encoded value to
+		// zero
+		epos = 0
+
+		// Get the next value
 		v, err = c.getNext()
 
+		// Find the huffman coding for the value
 		enc, ok = c.codeTable[v]
 		if !ok {
 			return fmt.Errorf("invalid encoding, unable to find char")
 		}
 
-		fmt.Println(enc)
+		// Write the encoded value one byte at a time
+		for epos < enc.bitLen {
+			// Clear relevant bits
+			b = b & (0xFF << (byteSize - bpos))
+
+			// Set new bits from the code
+			b = b | byte(enc.code<<epos)
+
+			// epos will either be another byte len or we've reached
+			// the end of the bitlen
+			if epos+byteSize > enc.bitLen {
+				epos = enc.bitLen
+			} else {
+				epos += byteSize
+			}
+
+			// bpos will either be zero or the remainder of bits left to be set
+			// in this byte
+			bpos = epos % byteSize
+
+			// Write every time we're at an aligned byte
+			if bpos == 0 {
+				bw.WriteByte(b)
+			}
+		}
 	}
 
 	// Ignore EOF error
