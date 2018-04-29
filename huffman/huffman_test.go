@@ -19,5 +19,5 @@ func TestHuffman(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	huff.Encode(os.Stdout)
+	huff.Encode(os.Stderr)
 }

@@ -69,8 +69,10 @@ func NewCoder(valueType int, r io.ReadSeeker) (Coder, error) {
 	c.createCodeTable(c.root, 0, 0)
 
 	for k, v := range c.codeTable {
-		fmt.Printf("%v => {%b %v}\n", k, v.code, v.bitLen)
+		fmt.Printf("%v %c => {%b %v}\n", k, k, v.code, v.bitLen)
 	}
+
+	fmt.Println()
 
 	return c, err
 }
@@ -85,6 +87,7 @@ func (c Coder) Encode(w io.Writer) error {
 		b    byte
 		bpos uint
 		epos uint
+		i    int
 	)
 
 	// Seek to start of file
@@ -131,6 +134,14 @@ func (c Coder) Encode(w io.Writer) error {
 			if bpos == 0 {
 				bw.WriteByte(b)
 			}
+
+			fmt.Printf("%b", b)
+		}
+
+		i++
+
+		if i >= 4 {
+			break
 		}
 	}
 
@@ -139,7 +150,7 @@ func (c Coder) Encode(w io.Writer) error {
 		err = nil
 	}
 
-	return err
+	return bw.Flush()
 }
 
 // getNext gets the next value from the stream, depending on the value type
