@@ -66,7 +66,7 @@ func NewCoder(valueType int, r io.ReadSeeker) (Coder, error) {
 
 	c.root, err = c.createTree(freqs)
 
-	c.createCodeTable(c.root, 0, 0)
+	c.createCodeTable(c.root, 0, 1)
 
 	for k, v := range c.codeTable {
 		fmt.Printf("%v %c => {%b %v}\n", k, k, v.code, v.bitLen)
@@ -110,13 +110,28 @@ func (c Coder) Encode(w io.Writer) error {
 			return fmt.Errorf("invalid encoding, unable to find char")
 		}
 
+		fmt.Printf("%c %b %v\n", v, enc.code, enc.bitLen)
+		continue
+		i++
+
+		if i > 5 {
+			break
+		}
+
 		// Write the encoded value one byte at a time
 		for epos < enc.bitLen {
+
+			fmt.Printf("@1 b: %b, enc.code: %b, enc.bitLen: %v, epos: %v, bpos: %v\n", b, enc.code, enc.bitLen, epos, bpos)
+
 			// Clear relevant bits
 			b = b & (0xFF << (byteSize - bpos))
 
+			fmt.Printf("@2 b: %b, enc.code: %b, enc.bitLen: %v, epos: %v, bpos: %v\n", b, enc.code, enc.bitLen, epos, bpos)
+
 			// Set new bits from the code
-			b = b | byte(enc.code<<epos)
+			b = b | byte((enc.code>>epos)<<bpos)
+
+			fmt.Printf("@3 b: %b, enc.code: %b, enc.bitLen: %v, epos: %v, bpos: %v\n", b, enc.code, enc.bitLen, epos, bpos)
 
 			// epos will either be another byte len or we've reached
 			// the end of the bitlen
@@ -125,6 +140,7 @@ func (c Coder) Encode(w io.Writer) error {
 			} else {
 				epos += byteSize
 			}
+			fmt.Printf("@4 b: %b, enc.code: %b, enc.bitLen: %v, epos: %v, bpos: %v\n", b, enc.code, enc.bitLen, epos, bpos)
 
 			// bpos will either be zero or the remainder of bits left to be set
 			// in this byte
@@ -132,17 +148,15 @@ func (c Coder) Encode(w io.Writer) error {
 
 			// Write every time we're at an aligned byte
 			if bpos == 0 {
-				bw.WriteByte(b)
+				fmt.Printf("%b\n", b)
+				//bw.WriteByte(b)
 			}
 
-			fmt.Printf("%b", b)
+			fmt.Printf("@5 b: %b, enc.code: %b, enc.bitLen: %v, epos: %v, bpos: %v\n", b, enc.code, enc.bitLen, epos, bpos)
+
+			fmt.Println()
 		}
 
-		i++
-
-		if i >= 4 {
-			break
-		}
 	}
 
 	// Ignore EOF error
@@ -266,7 +280,7 @@ func (c Coder) createTree(freqs map[interface{}]int) (*node, error) {
 
 func (c Coder) createCodeTable(n *node, code uint64, bitLen uint) {
 	//fmt.Println(n.value, n.freq, n.left, n.right, code, bitLen)
-	fmt.Printf("%v %c %b %v\n", n.value, n.value, code, bitLen)
+	//fmt.Printf("%v %c %b %v\n", n.value, n.value, code, bitLen)
 
 	// If there is not a null value node, then record its code
 	if n.value != 0 {
