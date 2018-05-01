@@ -4,11 +4,15 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"log"
 
 	"github.com/brnstz/algo"
 )
 
-const byteSize = 8
+const (
+	byteSize = 8
+	eofChar  = 26
+)
 
 const (
 	// Binary reads the incoming stream as 8-bit values
@@ -89,9 +93,13 @@ func (c Coder) Encode(w io.Writer) error {
 
 	bw := bufio.NewWriter(w)
 
-	for err == nil {
+	for {
 		// Get the next value
 		v, err = c.getNext()
+
+		if err != nil {
+			break
+		}
 
 		// Find the huffman coding for the value
 		enc, ok = c.codeTable[v]
@@ -101,15 +109,20 @@ func (c Coder) Encode(w io.Writer) error {
 
 		// Print every bit individually
 		for _, bit := range enc {
+
+			// Set bit if necessary
 			if bit {
 				b |= 1 << bpos
 			}
 
+			// Next bit, next loop
 			bpos++
 
+			// If we're at an even byte, then write and reset
 			if bpos%byteSize == 0 {
-				bpos = 0
 				bw.WriteByte(b)
+
+				bpos = 0
 				b = 0
 			}
 		}
@@ -126,6 +139,52 @@ func (c Coder) Encode(w io.Writer) error {
 	}
 
 	return bw.Flush()
+}
+
+func (c Coder) Decode(r io.Reader) {
+	var (
+		err  error
+		b    byte
+		bpos uint8
+
+		n *node
+	)
+
+	br := bufio.NewReader(r)
+	n = c.root
+
+	for {
+		// Get every byte in the stream
+		b, err = br.ReadByte()
+
+		if err != nil {
+			break
+		}
+
+		for bpos = 0; bpos < byteSize; bpos++ {
+			if b&(1<<bpos) == 0 {
+				//log.Printf("n: %v go left\n", n.value)
+				n = n.left
+			} else {
+				//log.Printf("n: %v go right\n", n.value)
+				n = n.right
+			}
+
+			if n == nil {
+				log.Fatal("encountered fatal error")
+			}
+
+			if n.value == eofChar {
+				break
+			}
+
+			if n.value != 0 {
+				fmt.Printf("%c", n.value)
+				n = c.root
+			}
+		}
+	}
+
 }
 
 // getNext gets the next value from the stream, depending on the value type
@@ -156,8 +215,12 @@ func (c Coder) createFreq() (map[interface{}]int, error) {
 		err error
 	)
 
-	// freqs maps each value to the number of times it occurs
-	freqs := map[interface{}]int{}
+	// freqs maps each value to the number of times it occurs. Include
+	// an ASCII eofChar with low frequency to indicate end of the stream. Not
+	// to be confused with io.EOF (which is an error value, not an ASCII code)
+	freqs := map[interface{}]int{
+		eofChar: 1,
+	}
 
 	// Get frequencies of all values
 	for err == nil {

@@ -1,6 +1,7 @@
 package huffman_test
 
 import (
+	"bytes"
 	"os"
 	"testing"
 
@@ -13,11 +14,17 @@ func TestHuffman(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer r.Close()
 
 	huff, err := huffman.NewCoder(huffman.Rune, r)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	huff.Encode(os.Stderr)
+	wb := &bytes.Buffer{}
+	huff.Encode(wb)
+
+	rb := bytes.NewBuffer(wb.Bytes())
+
+	huff.Decode(rb)
 }
