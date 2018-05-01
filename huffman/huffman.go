@@ -75,10 +75,12 @@ func NewCoder(valueType int, r io.ReadSeeker) (Coder, error) {
 // Encode writes Huffman encoded data to w
 func (c Coder) Encode(w io.Writer) error {
 	var (
-		err error
-		v   interface{}
-		enc []bool
-		ok  bool
+		err  error
+		v    interface{}
+		enc  []bool
+		ok   bool
+		b    byte
+		bpos uint8
 	)
 
 	// Seek to start of file
@@ -97,12 +99,30 @@ func (c Coder) Encode(w io.Writer) error {
 			return fmt.Errorf("invalid encoding, unable to find char")
 		}
 
-		fmt.Println(enc)
+		// Print every bit individually
+		for _, bit := range enc {
+			if bit {
+				b |= 1 << bpos
+			}
+
+			bpos++
+
+			if bpos%byteSize == 0 {
+				bpos = 0
+				bw.WriteByte(b)
+				b = 0
+			}
+		}
 	}
 
 	// Ignore EOF error
 	if err == io.EOF {
 		err = nil
+	}
+
+	// Write final byte if we didn't end evenly
+	if bpos > 0 {
+		bw.WriteByte(b)
 	}
 
 	return bw.Flush()
@@ -219,6 +239,8 @@ func (c Coder) createTree(freqs map[interface{}]int) (*node, error) {
 	return parent, nil
 }
 
+// createCodeTable recursively populates the mapping between node values and
+// their Huffman code (as represented by a slice of bools)
 func (c Coder) createCodeTable(n *node, enc []bool) {
 	// If there is not a null value node, then record its code
 	if n.value != 0 {
