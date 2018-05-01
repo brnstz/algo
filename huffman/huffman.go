@@ -30,7 +30,7 @@ type node struct {
 func (n *node) PQLess(other algo.PQItem) bool {
 	otherN := other.(*node)
 
-	return n.freq > otherN.freq
+	return n.freq >= otherN.freq
 }
 
 // Coder is a Huffman encoder/decoder
@@ -39,12 +39,7 @@ type Coder struct {
 	root      *node
 	r         *bufio.Reader
 	rs        io.ReadSeeker
-	codeTable map[interface{}]encoding
-}
-
-type encoding struct {
-	code   uint64
-	bitLen uint
+	codeTable map[interface{}][]bool
 }
 
 // NewCoder creates a Coder instance that reads from r interpreting values as
@@ -56,7 +51,7 @@ func NewCoder(valueType int, r io.ReadSeeker) (Coder, error) {
 		valueType: valueType,
 		r:         bufio.NewReader(r),
 		rs:        r,
-		codeTable: map[interface{}]encoding{},
+		codeTable: map[interface{}][]bool{},
 	}
 
 	freqs, err := c.createFreq()
@@ -66,10 +61,10 @@ func NewCoder(valueType int, r io.ReadSeeker) (Coder, error) {
 
 	c.root, err = c.createTree(freqs)
 
-	c.createCodeTable(c.root, 0, 1)
+	c.createCodeTable(c.root, nil)
 
 	for k, v := range c.codeTable {
-		fmt.Printf("%v %c => {%b %v}\n", k, k, v.code, v.bitLen)
+		fmt.Printf("%v %c => {%v}\n", k, k, v)
 	}
 
 	fmt.Println()
@@ -80,14 +75,10 @@ func NewCoder(valueType int, r io.ReadSeeker) (Coder, error) {
 // Encode writes Huffman encoded data to w
 func (c Coder) Encode(w io.Writer) error {
 	var (
-		err  error
-		v    interface{}
-		enc  encoding
-		ok   bool
-		b    byte
-		bpos uint
-		epos uint
-		i    int
+		err error
+		v   interface{}
+		enc []bool
+		ok  bool
 	)
 
 	// Seek to start of file
@@ -97,10 +88,6 @@ func (c Coder) Encode(w io.Writer) error {
 	bw := bufio.NewWriter(w)
 
 	for err == nil {
-		// Reset the position we starting on the encoded value to
-		// zero
-		epos = 0
-
 		// Get the next value
 		v, err = c.getNext()
 
@@ -110,53 +97,7 @@ func (c Coder) Encode(w io.Writer) error {
 			return fmt.Errorf("invalid encoding, unable to find char")
 		}
 
-		fmt.Printf("%c %b %v\n", v, enc.code, enc.bitLen)
-		continue
-		i++
-
-		if i > 5 {
-			break
-		}
-
-		// Write the encoded value one byte at a time
-		for epos < enc.bitLen {
-
-			fmt.Printf("@1 b: %b, enc.code: %b, enc.bitLen: %v, epos: %v, bpos: %v\n", b, enc.code, enc.bitLen, epos, bpos)
-
-			// Clear relevant bits
-			b = b & (0xFF << (byteSize - bpos))
-
-			fmt.Printf("@2 b: %b, enc.code: %b, enc.bitLen: %v, epos: %v, bpos: %v\n", b, enc.code, enc.bitLen, epos, bpos)
-
-			// Set new bits from the code
-			b = b | byte((enc.code>>epos)<<bpos)
-
-			fmt.Printf("@3 b: %b, enc.code: %b, enc.bitLen: %v, epos: %v, bpos: %v\n", b, enc.code, enc.bitLen, epos, bpos)
-
-			// epos will either be another byte len or we've reached
-			// the end of the bitlen
-			if epos+byteSize > enc.bitLen {
-				epos = enc.bitLen
-			} else {
-				epos += byteSize
-			}
-			fmt.Printf("@4 b: %b, enc.code: %b, enc.bitLen: %v, epos: %v, bpos: %v\n", b, enc.code, enc.bitLen, epos, bpos)
-
-			// bpos will either be zero or the remainder of bits left to be set
-			// in this byte
-			bpos = epos % byteSize
-
-			// Write every time we're at an aligned byte
-			if bpos == 0 {
-				fmt.Printf("%b\n", b)
-				//bw.WriteByte(b)
-			}
-
-			fmt.Printf("@5 b: %b, enc.code: %b, enc.bitLen: %v, epos: %v, bpos: %v\n", b, enc.code, enc.bitLen, epos, bpos)
-
-			fmt.Println()
-		}
-
+		fmt.Println(enc)
 	}
 
 	// Ignore EOF error
@@ -278,26 +219,22 @@ func (c Coder) createTree(freqs map[interface{}]int) (*node, error) {
 	return parent, nil
 }
 
-func (c Coder) createCodeTable(n *node, code uint64, bitLen uint) {
-	//fmt.Println(n.value, n.freq, n.left, n.right, code, bitLen)
-	//fmt.Printf("%v %c %b %v\n", n.value, n.value, code, bitLen)
-
+func (c Coder) createCodeTable(n *node, enc []bool) {
 	// If there is not a null value node, then record its code
 	if n.value != 0 {
-		c.codeTable[n.value] = encoding{
-			code:   code,
-			bitLen: bitLen,
-		}
+		c.codeTable[n.value] = enc
 	}
 
 	// Recurse left and right
 	if n.left != nil {
-		// Left means "0" so just increase the bit length
-		c.createCodeTable(n.left, code, bitLen+1)
+		newEnc := append([]bool(nil), enc...)
+		newEnc = append(newEnc, false)
+		c.createCodeTable(n.left, newEnc)
 	}
 
 	if n.right != nil {
-		// Right means "1" so add a 1 bit at the new bitLen
-		c.createCodeTable(n.right, code|1<<(bitLen+1), bitLen+1)
+		newEnc := append([]bool(nil), enc...)
+		newEnc = append(newEnc, true)
+		c.createCodeTable(n.right, newEnc)
 	}
 }
