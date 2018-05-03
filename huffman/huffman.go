@@ -3,7 +3,6 @@ package huffman
 import (
 	"bufio"
 	"errors"
-	"fmt"
 	"io"
 
 	"github.com/brnstz/algo"
@@ -62,6 +61,7 @@ type Coder struct {
 	valueType int
 	root      *node
 	codeTable map[interface{}][]bool
+	eofChar   interface{}
 }
 
 // NewCoder creates a new Huffman coder that trains itself by reading
@@ -74,6 +74,17 @@ func NewCoder(valueType int, trainer io.Reader) (Coder, error) {
 	c := Coder{
 		valueType: valueType,
 		codeTable: map[interface{}][]bool{},
+	}
+
+	switch valueType {
+	case Rune:
+		c.eofChar = rune(eofChar)
+
+	case Binary:
+		c.eofChar = byte(eofChar)
+
+	default:
+		return c, ErrUnsupportedValueType
 	}
 
 	// Get frequency counts
@@ -98,14 +109,21 @@ func (c Coder) Encode(r io.Reader, w io.Writer) error {
 		ok   bool
 		b    byte
 		bpos uint8
+		done bool
 	)
 
 	br := bufio.NewReader(r)
 	bw := bufio.NewWriter(w)
 
-	for {
+	for !done {
 		// Get the next value
 		v, err = c.getNext(br)
+
+		if err == io.EOF {
+			done = true
+			err = nil
+			v = c.eofChar
+		}
 
 		if err != nil {
 			break
@@ -114,7 +132,7 @@ func (c Coder) Encode(r io.Reader, w io.Writer) error {
 		// Find the huffman coding for the value
 		enc, ok = c.codeTable[v]
 		if !ok {
-			return fmt.Errorf("invalid encoding, unable to find char")
+			return ErrUnexpectedValue
 		}
 
 		// Print every bit individually
@@ -136,11 +154,6 @@ func (c Coder) Encode(r io.Reader, w io.Writer) error {
 				b = 0
 			}
 		}
-	}
-
-	// Ignore EOF error
-	if err == io.EOF {
-		err = nil
 	}
 
 	// Write final byte if we didn't end evenly
@@ -190,7 +203,7 @@ func (c Coder) Decode(r io.Reader, w io.Writer) error {
 			}
 
 			// If it's EOF, we are done
-			if n.value == eofChar {
+			if n.value == c.eofChar {
 				break
 			}
 
@@ -262,7 +275,7 @@ func (c Coder) createFreq(r io.Reader) (map[interface{}]int, error) {
 	// an ASCII eofChar with low frequency to indicate end of the stream. Not
 	// to be confused with io.EOF (which is an error value, not an ASCII code)
 	freqs := map[interface{}]int{
-		eofChar: 1,
+		c.eofChar: 1,
 	}
 
 	// Get frequencies of all values
