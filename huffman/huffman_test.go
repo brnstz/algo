@@ -2,6 +2,7 @@ package huffman_test
 
 import (
 	"bytes"
+	"log"
 	"os"
 	"testing"
 
@@ -9,6 +10,9 @@ import (
 )
 
 func TestHuffman(t *testing.T) {
+	var err error
+
+	testVal := "can we encode this"
 
 	r, err := os.Open("../data/tale.txt")
 	if err != nil {
@@ -21,10 +25,23 @@ func TestHuffman(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wb := &bytes.Buffer{}
-	huff.Encode(wb)
+	rb := bytes.NewBufferString(testVal)
+	encB := &bytes.Buffer{}
+	decB := &bytes.Buffer{}
 
-	rb := bytes.NewBuffer(wb.Bytes())
+	err = huff.Encode(rb, encB)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	huff.Decode(rb)
+	rb = bytes.NewBuffer(encB.Bytes())
+
+	err = huff.Decode(rb, decB)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if decB.String() != testVal {
+		log.Fatalf("expected '%v' but got '%v'", testVal, decB.String())
+	}
 }

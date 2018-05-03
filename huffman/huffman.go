@@ -2,9 +2,9 @@ package huffman
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
-	"log"
 
 	"github.com/brnstz/algo"
 )
@@ -12,6 +12,26 @@ import (
 const (
 	byteSize = 8
 	eofChar  = 26
+)
+
+var (
+
+	// ErrUnsupportedValueType is
+	ErrUnsupportedValueType = errors.New(
+		"use either Binary or Rune as valueType",
+	)
+
+	// ErrUnexpectedValue is returned when encoding a stream and its
+	// huffman coding is not found
+	ErrUnexpectedValue = errors.New(
+		"input stream has a value not found in training set",
+	)
+
+	// ErrDecoding is returned when unexpected data is found in the
+	// stream we are decoding
+	ErrDecoding = errors.New(
+		"unexpected bits in stream during decoding",
+	)
 )
 
 const (
@@ -41,43 +61,36 @@ func (n *node) PQLess(other algo.PQItem) bool {
 type Coder struct {
 	valueType int
 	root      *node
-	r         *bufio.Reader
-	rs        io.ReadSeeker
 	codeTable map[interface{}][]bool
 }
 
-// NewCoder creates a Coder instance that reads from r interpreting values as
-// either Binary or Rune
-func NewCoder(valueType int, r io.ReadSeeker) (Coder, error) {
+// NewCoder creates a new Huffman coder that trains itself by reading
+// values from trainer as valueType. That is, we use the trainer as the
+// source of value frequency.
+func NewCoder(valueType int, trainer io.Reader) (Coder, error) {
 	var err error
 
+	// Initialize the coder
 	c := Coder{
 		valueType: valueType,
-		r:         bufio.NewReader(r),
-		rs:        r,
 		codeTable: map[interface{}][]bool{},
 	}
 
-	freqs, err := c.createFreq()
+	// Get frequency counts
+	freqs, err := c.createFreq(trainer)
 	if err != nil {
 		return c, err
 	}
 
+	// Create the encoding tree and table
 	c.root, err = c.createTree(freqs)
-
 	c.createCodeTable(c.root, nil)
-
-	for k, v := range c.codeTable {
-		fmt.Printf("%v %c => {%v}\n", k, k, v)
-	}
-
-	fmt.Println()
 
 	return c, err
 }
 
-// Encode writes Huffman encoded data to w
-func (c Coder) Encode(w io.Writer) error {
+// Encode writes Huffman encoded data to w given the unencoded source r
+func (c Coder) Encode(r io.Reader, w io.Writer) error {
 	var (
 		err  error
 		v    interface{}
@@ -87,15 +100,12 @@ func (c Coder) Encode(w io.Writer) error {
 		bpos uint8
 	)
 
-	// Seek to start of file
-	c.rs.Seek(0, io.SeekStart)
-	c.r.Reset(c.rs)
-
+	br := bufio.NewReader(r)
 	bw := bufio.NewWriter(w)
 
 	for {
 		// Get the next value
-		v, err = c.getNext()
+		v, err = c.getNext(br)
 
 		if err != nil {
 			break
@@ -141,7 +151,8 @@ func (c Coder) Encode(w io.Writer) error {
 	return bw.Flush()
 }
 
-func (c Coder) Decode(r io.Reader) {
+// Decode the stream of data r and write it to w
+func (c Coder) Decode(r io.Reader, w io.Writer) error {
 	var (
 		err  error
 		b    byte
@@ -151,44 +162,71 @@ func (c Coder) Decode(r io.Reader) {
 	)
 
 	br := bufio.NewReader(r)
+	bw := bufio.NewWriter(w)
 	n = c.root
 
 	for {
 		// Get every byte in the stream
 		b, err = br.ReadByte()
 
+		// If there's a non-nil error, stop reading
 		if err != nil {
 			break
 		}
 
+		// Read each bit of byte
 		for bpos = 0; bpos < byteSize; bpos++ {
+
+			// If it's 0, go left, otherwise go right
 			if b&(1<<bpos) == 0 {
-				//log.Printf("n: %v go left\n", n.value)
 				n = n.left
 			} else {
-				//log.Printf("n: %v go right\n", n.value)
 				n = n.right
 			}
 
+			// If we reached a nil node, the file is corrupt
 			if n == nil {
-				log.Fatal("encountered fatal error")
+				return ErrDecoding
 			}
 
+			// If it's EOF, we are done
 			if n.value == eofChar {
 				break
 			}
 
-			if n.value != 0 {
-				fmt.Printf("%c", n.value)
-				n = c.root
+			// If the value is zero, keep on going through
+			if n.value == 0 {
+				continue
 			}
+
+			// If it's not zero, we have something to write
+			switch c.valueType {
+
+			case Binary:
+				err = bw.WriteByte(n.value.(byte))
+
+			case Rune:
+				_, err = bw.WriteRune(n.value.(rune))
+
+			default:
+				err = ErrUnsupportedValueType
+			}
+
+			// Was there any error in our switch?
+			if err != nil {
+				return err
+			}
+
+			// Reset back to root for next byte
+			n = c.root
 		}
 	}
 
+	return bw.Flush()
 }
 
 // getNext gets the next value from the stream, depending on the value type
-func (c Coder) getNext() (interface{}, error) {
+func (c Coder) getNext(br *bufio.Reader) (interface{}, error) {
 	var (
 		err error
 		v   interface{}
@@ -197,10 +235,13 @@ func (c Coder) getNext() (interface{}, error) {
 	switch c.valueType {
 
 	case Binary:
-		v, err = c.r.ReadByte()
+		v, err = br.ReadByte()
 
 	case Rune:
-		v, _, err = c.r.ReadRune()
+		v, _, err = br.ReadRune()
+
+	default:
+		return nil, ErrUnsupportedValueType
 
 	}
 
@@ -209,11 +250,13 @@ func (c Coder) getNext() (interface{}, error) {
 
 // createFreq reads the incoming stream and creates a mapping of values
 // to frequency counts
-func (c Coder) createFreq() (map[interface{}]int, error) {
+func (c Coder) createFreq(r io.Reader) (map[interface{}]int, error) {
 	var (
 		v   interface{}
 		err error
 	)
+
+	br := bufio.NewReader(r)
 
 	// freqs maps each value to the number of times it occurs. Include
 	// an ASCII eofChar with low frequency to indicate end of the stream. Not
@@ -224,7 +267,7 @@ func (c Coder) createFreq() (map[interface{}]int, error) {
 
 	// Get frequencies of all values
 	for err == nil {
-		v, err = c.getNext()
+		v, err = c.getNext(br)
 		freqs[v]++
 	}
 
