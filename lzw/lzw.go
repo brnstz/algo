@@ -56,6 +56,8 @@ func Encode(r io.Reader, w io.Writer) error {
 
 		buff = append(buff, b)
 
+		// fmt.Println(buff)
+
 		// If current buff is in our code, then continue
 		// and try to find a bigger code
 		_, exists = codes[hex.EncodeToString(buff)]
@@ -66,7 +68,10 @@ func Encode(r io.Reader, w io.Writer) error {
 		// Otherwise, print out the code without the most recent
 		// byte
 		// FIXME: figure out how to align bytes
-		fmt.Println(codes[hex.EncodeToString(buff[0:len(buff)-1])])
+		fmt.Printf("%v => %v\n",
+			buff[0:len(buff)-1],
+			codes[hex.EncodeToString(buff[0:len(buff)-1])],
+		)
 
 		// FIXME: what to do when we run out of codes?
 		if nextCode < allCodeMax {
