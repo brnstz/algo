@@ -3,13 +3,21 @@ package lzw
 import (
 	"bufio"
 	"encoding/hex"
-	"fmt"
 	"io"
+
+	"github.com/brnstz/algo/bit"
 )
 
 const (
-	initialCodeMax = 1 << 8
-	allCodeMax     = 1 << 12
+	codewordSize = 12
+	codeBytes    = 2
+	byteSize     = 8
+
+	// Initial code (single byte) is just 8 bits
+	initialCodeMax = 1 << byteSize
+
+	// Max code size is 12 bits
+	allCodeMax = 1 << codewordSize
 )
 
 func createInitialMap() map[string]int {
@@ -26,69 +34,84 @@ func createInitialMap() map[string]int {
 // Encode reads uncompressed data from r and writes it to w
 func Encode(r io.Reader, w io.Writer) error {
 	var (
-		err      error
-		b        byte
-		buff     []byte
-		nextCode = initialCodeMax + 1
-		exists   bool
+		err    error
+		b      byte
+		buff   []byte
+		exists bool
+		code   int
+		i      uint8
 
-		// outputByte byte
+		nextCode = initialCodeMax + 1
 	)
 
+	output := make([]byte, codeBytes)
 	codes := createInitialMap()
 	br := bufio.NewReader(r)
-	// bw := bufio.NewWriter(w)
+	bitw := bit.NewWriter(w)
 
+	// Read the first byte and append to our buffer
 	b, err = br.ReadByte()
 	if err != nil {
 		return err
 	}
-
 	buff = append(buff, b)
 
 	for {
 
+		// Peek at the next byte and append to our buffer
 		b, err = br.ReadByte()
-
 		if err != nil {
 			break
 		}
-
 		buff = append(buff, b)
 
-		// fmt.Println(buff)
-
-		// If current buff is in our code, then continue
-		// and try to find a bigger code
+		// If current buff is in our code, then continue and try to find a
+		// bigger code
 		_, exists = codes[hex.EncodeToString(buff)]
 		if exists {
 			continue
 		}
 
-		// Otherwise, print out the code without the most recent
-		// byte
-		// FIXME: figure out how to align bytes
-		fmt.Printf("%v => %v\n",
-			buff[0:len(buff)-1],
-			codes[hex.EncodeToString(buff[0:len(buff)-1])],
-		)
+		// If it didn't exist, then give up and write the code for
+		// everything except this current character.
+		code = codes[hex.EncodeToString(buff[0:len(buff)-1])]
 
-		// FIXME: what to do when we run out of codes?
+		for i = 0; i < codeBytes; i++ {
+			output[i] = byte(code >> (byteSize * i))
+		}
+
+		err = bitw.WriteBits(output, codewordSize)
+		if err != nil {
+			return err
+		}
+
+		// If we have room for new codes, then add it
 		if nextCode < allCodeMax {
 			codes[hex.EncodeToString(buff)] = nextCode
 			nextCode++
 		}
 
 		buff = []byte{b}
-
 	}
 
-	// Print final code. Also FIXME to figure out how to align bytes
-	fmt.Println(codes[hex.EncodeToString(buff)])
-
+	// Check any reader error
 	if err == io.EOF {
 		err = nil
 	}
+	if err != nil {
+		return err
+	}
 
-	return err
+	code = codes[hex.EncodeToString(buff)]
+
+	for i = 0; i < codeBytes; i++ {
+		output[i] = byte(code >> (byteSize * i))
+	}
+
+	err = bitw.WriteBits(output, codewordSize)
+	if err != nil {
+		return err
+	}
+
+	return bitw.Flush()
 }

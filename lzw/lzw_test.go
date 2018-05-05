@@ -16,5 +16,8 @@ func TestLZW(t *testing.T) {
 	}
 	defer r.Close()
 
-	lzw.Encode(r, os.Stdout)
+	err = lzw.Encode(r, os.Stdout)
+	if err != nil {
+		t.Fatal(err)
+	}
 }

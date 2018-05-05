@@ -88,7 +88,7 @@ func (w *Writer) WriteBits(p []byte, bits int) error {
 		// Iterate over every applicable bit in b
 		for j = 0; j < bitLen; j++ {
 
-			if b&(1<<j) == 1 {
+			if b&(1<<j) > 1 {
 				bit = true
 			} else {
 				bit = false
