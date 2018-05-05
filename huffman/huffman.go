@@ -6,6 +6,7 @@ import (
 	"io"
 
 	"github.com/brnstz/algo"
+	"github.com/brnstz/algo/bit"
 )
 
 const (
@@ -107,13 +108,11 @@ func (c Coder) Encode(r io.Reader, w io.Writer) error {
 		v    interface{}
 		enc  []bool
 		ok   bool
-		b    byte
-		bpos uint8
 		done bool
 	)
 
 	br := bufio.NewReader(r)
-	bw := bufio.NewWriter(w)
+	bw := bit.NewWriter(w)
 
 	for !done {
 		// Get the next value
@@ -137,28 +136,8 @@ func (c Coder) Encode(r io.Reader, w io.Writer) error {
 
 		// Print every bit individually
 		for _, bit := range enc {
-
-			// Set bit if necessary
-			if bit {
-				b |= 1 << bpos
-			}
-
-			// Next bit, next loop
-			bpos++
-
-			// If we're at an even byte, then write and reset
-			if bpos%byteSize == 0 {
-				bw.WriteByte(b)
-
-				bpos = 0
-				b = 0
-			}
+			bw.WriteBit(bit)
 		}
-	}
-
-	// Write final byte if we didn't end evenly
-	if bpos > 0 {
-		bw.WriteByte(b)
 	}
 
 	return bw.Flush()
