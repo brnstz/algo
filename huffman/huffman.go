@@ -6,11 +6,11 @@ import (
 	"io"
 
 	"github.com/brnstz/algo"
+	"github.com/brnstz/algo/bit"
 )
 
 const (
 	byteSize = 8
-	eofChar  = 26
 )
 
 var (
@@ -61,7 +61,6 @@ type Coder struct {
 	valueType int
 	root      *node
 	codeTable map[interface{}][]bool
-	eofChar   interface{}
 }
 
 // NewCoder creates a new Huffman coder that trains itself by reading
@@ -74,17 +73,6 @@ func NewCoder(valueType int, trainer io.Reader) (Coder, error) {
 	c := Coder{
 		valueType: valueType,
 		codeTable: map[interface{}][]bool{},
-	}
-
-	switch valueType {
-	case Rune:
-		c.eofChar = rune(eofChar)
-
-	case Binary:
-		c.eofChar = byte(eofChar)
-
-	default:
-		return c, ErrUnsupportedValueType
 	}
 
 	// Get frequency counts
@@ -107,13 +95,11 @@ func (c Coder) Encode(r io.Reader, w io.Writer) error {
 		v    interface{}
 		enc  []bool
 		ok   bool
-		b    byte
-		bpos uint8
 		done bool
 	)
 
 	br := bufio.NewReader(r)
-	bw := bufio.NewWriter(w)
+	bw := bit.NewWriter(w)
 
 	for !done {
 		// Get the next value
@@ -122,7 +108,7 @@ func (c Coder) Encode(r io.Reader, w io.Writer) error {
 		if err == io.EOF {
 			done = true
 			err = nil
-			v = c.eofChar
+			v = io.EOF
 		}
 
 		if err != nil {
@@ -137,28 +123,8 @@ func (c Coder) Encode(r io.Reader, w io.Writer) error {
 
 		// Print every bit individually
 		for _, bit := range enc {
-
-			// Set bit if necessary
-			if bit {
-				b |= 1 << bpos
-			}
-
-			// Next bit, next loop
-			bpos++
-
-			// If we're at an even byte, then write and reset
-			if bpos%byteSize == 0 {
-				bw.WriteByte(b)
-
-				bpos = 0
-				b = 0
-			}
+			bw.WriteBit(bit)
 		}
-	}
-
-	// Write final byte if we didn't end evenly
-	if bpos > 0 {
-		bw.WriteByte(b)
 	}
 
 	return bw.Flush()
@@ -203,7 +169,7 @@ func (c Coder) Decode(r io.Reader, w io.Writer) error {
 			}
 
 			// If it's EOF, we are done
-			if n.value == c.eofChar {
+			if n.value == io.EOF {
 				break
 			}
 
@@ -271,11 +237,8 @@ func (c Coder) createFreq(r io.Reader) (map[interface{}]int, error) {
 
 	br := bufio.NewReader(r)
 
-	// freqs maps each value to the number of times it occurs. Include
-	// an ASCII eofChar with low frequency to indicate end of the stream. Not
-	// to be confused with io.EOF (which is an error value, not an ASCII code)
 	freqs := map[interface{}]int{
-		c.eofChar: 1,
+		io.EOF: 1,
 	}
 
 	// Get frequencies of all values
