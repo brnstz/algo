@@ -31,7 +31,7 @@ func createInitialMap() map[string]int {
 	return m
 }
 
-// Encode reads uncompressed data from r and writes it to w
+// Encode reads uncompressed data from r and writes a compressed vesrion to w
 func Encode(r io.Reader, w io.Writer) error {
 	var (
 		err    error
@@ -114,4 +114,10 @@ func Encode(r io.Reader, w io.Writer) error {
 	}
 
 	return bitw.Flush()
+}
+
+// Decode reads compressed data from r and writes an uncompressed version to
+// w
+func Decode(r io.Reader, w io.Writer) error {
+
 }
