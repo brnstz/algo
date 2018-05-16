@@ -79,6 +79,15 @@ func (r *Reader) ReadBits(bits int) ([]byte, int, error) {
 
 	// Iterate over each byte required
 	for i := 0; i < numBytes; i++ {
+		// By default, use all bits
+		numBits = byteSize
+
+		// Except on last byte perhaps
+		if i == numBytes-1 {
+			if bits%byteSize != 0 {
+				numBits = uint8(bits % byteSize)
+			}
+		}
 
 		// Iterate over bit for this byte
 		for j = 0; j < numBits; j++ {
@@ -94,10 +103,6 @@ func (r *Reader) ReadBits(bits int) ([]byte, int, error) {
 				p[i] |= 1 << j
 			}
 		}
-	}
-
-	if err == io.EOF {
-		err = nil
 	}
 
 	return p, numBytes, err
