@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"io"
-	"log"
 
 	"github.com/brnstz/algo/bit"
 )
@@ -163,63 +162,56 @@ func btoi(p []byte) int {
 // w
 func Decode(r io.Reader, w io.Writer) error {
 	var (
-		//buff []byte
-		err error
-		//code int
-
 		// codeword as bytes
 		cwb []byte
-		//exists bool
+
+		// buffer of untranslated codewords
+		encb []byte
+		decb []byte
+
+		err    error
+		exists bool
 	)
 
 	// Initialize reader/writer and initial code mapping
 	bitr := bit.NewReader(r)
-	//bw := bufio.NewWriter(w)
-	//decoded := createReverseMap()
+	bw := bufio.NewWriter(w)
+	decoded := createReverseMap()
 
+	// Get the decoded list of bytes of this codeword. If the first code isn't
+	// in our initial map, something is wrong.
+	bytes, exists = decoded[btoi(cwb)]
+	if !exists {
+		return ErrDecoding
+	}
+
+	// Write the decoded value
+	_, err = bw.Write(bytes)
+	if err != nil {
+		return err
+	}
+
+	// Initialize buffer with first codeword / translation
+	encb = cwb
+	decb = bytes
+
+	// Continue to read every other codeword
 	for {
+
 		// Read the first codeword from the incoming stream
 		cwb, _, err = bitr.ReadBits(codewordSize)
 		if err != nil {
-			return err
-		}
-		if err != nil {
-			log.Printf("err: %v", err)
 			break
 		}
 
-		log.Printf("codeword: %v\n", cwb)
-	}
-
-	/*
 		// Get the decoded list of bytes of this codeword
 		bytes, exists = decoded[btoi(cwb)]
-		// If the first code isn't in our initial map, something is wrong.
-		if !exists {
-			return ErrDecoding
-		}
+		if exists {
 
-		// Write the decoded value
-		_, err = bw.Write(bytes)
-		if err != nil {
-			return err
-		}
-
-		for {
-
-			// Read the first codeword from the incoming stream
-			cwb, _, err = bitr.ReadBits(codewordSize)
-			if err != nil {
-				return err
-			}
-
-			// Get the decoded list of bytes of this codeword
-			bytes, exists = decoded[btoi(cwb)]
-			// If the first code isn't in our initial map, something is wrong.
+		} else {
 
 		}
-	*/
+	}
 
 	return nil
-
 }
