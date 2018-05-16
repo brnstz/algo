@@ -30,10 +30,10 @@ func (r *Reader) ReadBit() (bool, error) {
 	)
 
 	// We need to read a byte everytime we're aligned with byteSize
-	if bpos%byteSize == 0 {
-		r.buffb, err = r.br.ReadByte(r.buffb)
+	if r.bpos%byteSize == 0 {
+		r.buffb, err = r.br.ReadByte()
 		if err != nil {
-			return err
+			return bit, err
 		}
 	}
 
@@ -45,13 +45,13 @@ func (r *Reader) ReadBit() (bool, error) {
 	}
 
 	// Increment for next time
-	if r.bpos == (byteLen - 1) {
+	if r.bpos == (byteSize - 1) {
 		r.bpos = 0
 	} else {
 		r.bpos++
 	}
 
-	return bit
+	return bit, nil
 }
 
 // ReadBits reads up to the number of bits specified. An array of bytes
@@ -62,26 +62,43 @@ func (r *Reader) ReadBit() (bool, error) {
 func (r *Reader) ReadBits(bits int) ([]byte, int, error) {
 	var (
 		numBytes int
-		numBits uint8
-		j uint8
+		numBits  uint8
+		bit      bool
+		j        uint8
+		err      error
 	)
 
 	// Calculate the bytes required
-	numBytes := bits / byteSize
-	if bit%byteSize != 0 {
+	numBytes = bits / byteSize
+	if bits%byteSize != 0 {
 		numBytes++
 	}
 
 	// Create an array with that number of bytes
-	p := make([]b, numBytes)
+	p := make([]byte, numBytes)
 
+	// Iterate over each byte required
 	for i := 0; i < numBytes; i++ {
-		for j := 0; j < 
+
+		// Iterate over bit for this byte
+		for j = 0; j < numBits; j++ {
+
+			// Get the next bit
+			bit, err = r.ReadBit()
+			if err != nil {
+				break
+			}
+
+			// If that bit is set, then set it in our return value
+			if bit {
+				p[i] |= 1 << j
+			}
+		}
 	}
+
+	if err == io.EOF {
+		err = nil
+	}
+
+	return p, numBytes, err
 }
-
-
-
-
-
-
