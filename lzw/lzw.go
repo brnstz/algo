@@ -13,6 +13,9 @@ const (
 	// Global variables that are true regardless of codewordSize
 	byteSize       = 8
 	initialCodeMax = 1 << byteSize
+
+	// Our default codewordSize
+	defaultCodewordSize = 12
 )
 
 var (
@@ -97,10 +100,17 @@ func (t *translations) Add(decoded []byte) (int, bool) {
 	return code, true
 }
 
-// Get returns the translated bytes for this code if they exist. If they
+// GetDecoded returns the translated bytes for this code if they exist. If they
 // do not exist, false is returned as the second value.
-func (t *translation) Get(code int) ([]byte, bool) {
+func (t *translations) GetDecoded(code int) ([]byte, bool) {
 	return t.decoded[code]
+}
+
+// GetEncoded returns the encoded int for this translation if it exists. If
+// it does not exists, false is returned as the second value.
+func (t *translations) GetEncoded(decoded []byte) (int, bool) {
+	return t.encoded[hex.EncodeToString(decoded)]
+
 }
 
 func createEncodedMap() map[string]int {
@@ -134,12 +144,11 @@ func Encode(r io.Reader, w io.Writer) error {
 		exists bool
 		code   int
 		i      uint8
-
-		nextCode = initialCodeMax + 1
 	)
 
+	t := newTranslations(defaultCodewordSize)
+
 	output := make([]byte, codeBytes)
-	encoded := createInitialMap()
 	br := bufio.NewReader(r)
 	bitw := bit.NewWriter(w)
 
@@ -161,14 +170,14 @@ func Encode(r io.Reader, w io.Writer) error {
 
 		// If current buff is in our code, then continue and try to find a
 		// bigger code
-		_, exists = encoded[hex.EncodeToString(buff)]
+		_, exists = t.GetEncoded(buff)
 		if exists {
 			continue
 		}
 
 		// If it didn't exist, then give up and write the code for
 		// everything except this current character.
-		code = encoded[hex.EncodeToString(buff[0:len(buff)-1])]
+		code = t.GetEncoded(buff[0 : len(buff)-1])
 
 		// Create the output list of bytes
 		for i = 0; i < codeBytes; i++ {
@@ -176,16 +185,14 @@ func Encode(r io.Reader, w io.Writer) error {
 		}
 
 		// Write exactly codewordSize bits downstream
-		err = bitw.WriteBits(output, codewordSize)
+		// FIXME: don't use constant here
+		err = bitw.WriteBits(output, defaultCodewordSize)
 		if err != nil {
 			return err
 		}
 
 		// If we have room for new codes, then add it
-		if nextCode < allCodeMax {
-			encoded[hex.EncodeToString(buff)] = nextCode
-			nextCode++
-		}
+		t.Add(buff)
 
 		buff = []byte{b}
 	}
@@ -199,7 +206,7 @@ func Encode(r io.Reader, w io.Writer) error {
 	}
 
 	// Get the final code in the buffer
-	code = encoded[hex.EncodeToString(buff)]
+	code = t.Get(buff)
 
 	// Create the output list of bytes
 	for i = 0; i < codeBytes; i++ {
@@ -232,6 +239,10 @@ func btoi(p []byte) int {
 	return q
 }
 
+func itob(i int) []byte {
+
+}
+
 // Decode reads compressed data from r and writes an uncompressed version to
 // w
 func Decode(r io.Reader, w io.Writer) error {
@@ -254,7 +265,7 @@ func Decode(r io.Reader, w io.Writer) error {
 	// Initialize reader/writer and initial code mapping
 	bitr := bit.NewReader(r)
 	bw := bufio.NewWriter(w)
-	decoded := createReverseMap()
+	t := newTranslations(defaultCodewordSize)
 
 	// Read the first codeword from the incoming stream
 	code, _, err = bitr.ReadBits(codewordSize)
@@ -264,7 +275,8 @@ func Decode(r io.Reader, w io.Writer) error {
 
 	// Get the decoded list of bytes of this codeword. If the first code isn't
 	// in our initial map, something is wrong.
-	translation, exists = decoded[btoi(code)]
+	// FIXME
+	translation, exists = t.Get(decoded[btoi(code)])
 	if !exists {
 		return ErrDecoding
 	}
