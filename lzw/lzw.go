@@ -10,15 +10,9 @@ import (
 )
 
 const (
-	codewordSize = 12
-	codeBytes    = 2
-	byteSize     = 8
-
-	// Initial code (single byte) is just 8 bits
+	// Global variables that are true regardless of codewordSize
+	byteSize       = 8
 	initialCodeMax = 1 << byteSize
-
-	// Max code size is 12 bits
-	allCodeMax = 1 << codewordSize
 )
 
 var (
@@ -29,7 +23,87 @@ var (
 	)
 )
 
-func createInitialMap() map[string]int {
+type translations struct {
+	// Internal maps of encoded and decoded values. We use a hex string
+	// to map encoded bytes to their code because a slice of bytes cannot
+	// be a key in a map.
+	encoded map[string]int
+	decoded map[int][]byte
+
+	// nextCode is the next code we are going to use when adding a translation
+	nextCode int
+
+	// codewordSize is the number of bits in a code
+	codewordSize int
+
+	// codeBytes is the number of bytes required to fully store a code
+	// (even if we don't use all of the bits)
+	codeBytes int
+}
+
+func newTranslations(codewordSize int) *translations {
+
+	// The number of bytes required to store a code are at least codewordSize /
+	// byteSize. If it's not an even byte, then add one.
+	codeBytes := codewordSize / byteSize
+	if codewordSize%byteSize != 0 {
+		codeBytes++
+	}
+
+	t := &translations{
+		encoded:      createEncodedMap(),
+		decoded:      createDecodedMap(),
+		codewordSize: codewordSize,
+		nextCode:     initialCodeMax + 1,
+		allCodeMax:   1 << codewordSize,
+		codeBytes:    codeBytes,
+	}
+
+	return t
+}
+
+// Add creates a translation for this set of decoded bytes. We return the new
+// code and a true value that indicates the translation was created. If a
+// mapping for this decoded set of bytes already exists, we return that value
+// and false as the second value. If there is no room to add a new code, we
+// return -1 as the code and false as the second value.
+func (t *translations) Add(decoded []byte) (int, bool) {
+	var (
+		code   int
+		exists bool
+	)
+
+	// If we don't have any room, then don't add it.
+	if t.nextCode >= t.allCodeMax {
+		return -1, false
+	}
+
+	// If we already have a code, then use that
+	code, exists = t.encoded[hex.EncodeToString(decoded)]
+	if exists {
+		return code, false
+	}
+
+	// Get next available code
+	code = t.nextCode
+
+	// Set encoded map
+	t.encoded[hex.EncodeToString(decoded)] = code
+	t.decoded[code] = decoded
+
+	// Increment for next code to add
+	t.nextCode++
+
+	return code, true
+}
+
+// Get returns the translated bytes for this code if they exist. If they
+// do not exist, false is returned as the second value.
+func (t *translation) Get(code int) ([]byte, bool) {
+	return t.decoded[code]
+}
+
+func createEncodedMap() map[string]int {
 	m := map[string]int{}
 
 	// Every 8-bit character gets mapped from hex to itself
@@ -40,7 +114,7 @@ func createInitialMap() map[string]int {
 	return m
 }
 
-func createReverseMap() map[int][]byte {
+func createDecodedMap() map[int][]byte {
 	m := map[int][]byte{}
 
 	// Every 8-bit character gets mapped from itself to a list of bytes
@@ -51,7 +125,7 @@ func createReverseMap() map[int][]byte {
 	return m
 }
 
-// Encode reads uncompressed data from r and writes a compressed vesrion to w
+// Encode reads uncompressed data from r and writes a compressed version to w
 func Encode(r io.Reader, w io.Writer) error {
 	var (
 		err    error
@@ -162,15 +236,19 @@ func btoi(p []byte) int {
 // w
 func Decode(r io.Reader, w io.Writer) error {
 	var (
-		// codeword as bytes
-		cwb []byte
+		// buffers of untranslated codewords
+		code     []byte
+		lastCode []byte
 
-		// buffer of untranslated codewords
-		encb []byte
-		decb []byte
+		// buffers of translated bytes
+		translation []byte
+		newEntry    []byte
 
-		err    error
-		exists bool
+		firstCharLastTranslation byte
+
+		err          error
+		exists       bool
+		backupExists bool
 	)
 
 	// Initialize reader/writer and initial code mapping
@@ -178,39 +256,73 @@ func Decode(r io.Reader, w io.Writer) error {
 	bw := bufio.NewWriter(w)
 	decoded := createReverseMap()
 
+	// Read the first codeword from the incoming stream
+	code, _, err = bitr.ReadBits(codewordSize)
+	if err != nil {
+		break
+	}
+
 	// Get the decoded list of bytes of this codeword. If the first code isn't
 	// in our initial map, something is wrong.
-	bytes, exists = decoded[btoi(cwb)]
+	translation, exists = decoded[btoi(code)]
 	if !exists {
 		return ErrDecoding
 	}
 
 	// Write the decoded value
-	_, err = bw.Write(bytes)
+	_, err = bw.Write(translation)
 	if err != nil {
 		return err
 	}
 
-	// Initialize buffer with first codeword / translation
-	encb = cwb
-	decb = bytes
+	// Save for detecting new translations
+	lastCode = code
+	firstCharLastTranslation = translation[0]
 
 	// Continue to read every other codeword
 	for {
 
-		// Read the first codeword from the incoming stream
-		cwb, _, err = bitr.ReadBits(codewordSize)
+		// Read the next codeword from the incoming stream
+		code, _, err = bitr.ReadBits(codewordSize)
 		if err != nil {
 			break
 		}
 
 		// Get the decoded list of bytes of this codeword
-		bytes, exists = decoded[btoi(cwb)]
-		if exists {
+		translation, exists = decoded[btoi(code)]
+		if !exists {
 
-		} else {
+			// If the current translation doesn't exists, first
+			// look to our last code
+			translation, backupExists = decoded[btoi(lastCode)]
 
+			// If lastCode doesn't exist, we have a corrupted
+			// input file.
+			if !backupExists {
+				return ErrDecoding
+			}
+
+			// We can infer the translation of the current code by taking
+			// the translation of lastCode and appending the first
+			// character of the last translation
+			translation = append(translation, firstCharLastTranslation)
 		}
+
+		// Write the decoded value
+		_, err = bw.Write(translation)
+		if err != nil {
+			return err
+		}
+
+		// Save for next iteration
+		firstCharLastTranslation = translation[0]
+
+		// Save the two character entry that will inform our future
+		// translations
+		newEntry = []byte{oldCode, firstCharLastTranslation}
+
+		// Save for next iteration
+		lastCode = code
 	}
 
 	return nil
