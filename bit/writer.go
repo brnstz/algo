@@ -5,8 +5,6 @@ import (
 	"io"
 )
 
-const byteSize = 8
-
 // Writer implements a way to write to a file one bit at a time. This allows
 // clients to write unaligned data between calls.
 type Writer struct {

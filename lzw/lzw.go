@@ -2,36 +2,30 @@ package lzw
 
 import (
 	"bufio"
-	"encoding/hex"
+	"errors"
 	"io"
+	"log"
 
 	"github.com/brnstz/algo/bit"
 )
 
-const (
-	codewordSize = 12
-	codeBytes    = 2
-	byteSize     = 8
+const defaultCodewordSize = 12
 
-	// Initial code (single byte) is just 8 bits
-	initialCodeMax = 1 << byteSize
+var (
+	// ErrDecoding is returned when unexpected data is found in the
+	// stream we are decoding
+	ErrDecoding = errors.New(
+		"unexpected bits in stream during decoding",
+	)
 
-	// Max code size is 12 bits
-	allCodeMax = 1 << codewordSize
+	// ErrEncoding is returned when an unexpected state occurs
+	// during encoding
+	ErrEncoding = errors.New(
+		"unexpected error while encoding",
+	)
 )
 
-func createInitialMap() map[string]int {
-	m := map[string]int{}
-
-	// Every 8-bit character gets mapped from hex to itself
-	for i := 0; i < initialCodeMax; i++ {
-		m[hex.EncodeToString([]byte{byte(i)})] = i
-	}
-
-	return m
-}
-
-// Encode reads uncompressed data from r and writes it to w
+// Encode reads uncompressed data from r and writes a compressed version to w
 func Encode(r io.Reader, w io.Writer) error {
 	var (
 		err    error
@@ -39,13 +33,10 @@ func Encode(r io.Reader, w io.Writer) error {
 		buff   []byte
 		exists bool
 		code   int
-		i      uint8
-
-		nextCode = initialCodeMax + 1
 	)
 
-	output := make([]byte, codeBytes)
-	codes := createInitialMap()
+	t := newTranslations(defaultCodewordSize)
+
 	br := bufio.NewReader(r)
 	bitw := bit.NewWriter(w)
 
@@ -67,29 +58,26 @@ func Encode(r io.Reader, w io.Writer) error {
 
 		// If current buff is in our code, then continue and try to find a
 		// bigger code
-		_, exists = codes[hex.EncodeToString(buff)]
+		_, exists = t.GetEncoded(buff)
 		if exists {
 			continue
 		}
 
 		// If it didn't exist, then give up and write the code for
 		// everything except this current character.
-		code = codes[hex.EncodeToString(buff[0:len(buff)-1])]
-
-		for i = 0; i < codeBytes; i++ {
-			output[i] = byte(code >> (byteSize * i))
+		code, exists = t.GetEncoded(buff[0 : len(buff)-1])
+		if !exists {
+			return ErrEncoding
 		}
 
-		err = bitw.WriteBits(output, codewordSize)
+		// Write exactly codewordSize bits downstream
+		err = bitw.WriteBits(t.Itob(code), t.CodewordSize)
 		if err != nil {
 			return err
 		}
 
 		// If we have room for new codes, then add it
-		if nextCode < allCodeMax {
-			codes[hex.EncodeToString(buff)] = nextCode
-			nextCode++
-		}
+		t.Add(buff)
 
 		buff = []byte{b}
 	}
@@ -102,16 +90,124 @@ func Encode(r io.Reader, w io.Writer) error {
 		return err
 	}
 
-	code = codes[hex.EncodeToString(buff)]
-
-	for i = 0; i < codeBytes; i++ {
-		output[i] = byte(code >> (byteSize * i))
+	// Get the final code in the buffer
+	code, exists = t.GetEncoded(buff)
+	if !exists {
+		return ErrEncoding
 	}
 
-	err = bitw.WriteBits(output, codewordSize)
+	// Write exactly t.CodewordSize bits downstream
+	err = bitw.WriteBits(t.Itob(code), t.CodewordSize)
 	if err != nil {
 		return err
 	}
 
+	// Ensure buffer is flushed
 	return bitw.Flush()
+}
+
+// Decode reads compressed data from r and writes an uncompressed version to w
+// FIXME: not yet working
+func Decode(r io.Reader, w io.Writer) error {
+	var (
+		// buffers of untranslated codewords
+		code     []byte
+		lastCode []byte
+
+		// buffers of translated bytes
+		translation []byte
+		newEntry    []byte
+
+		firstCharLastTranslation byte
+
+		err          error
+		exists       bool
+		backupExists bool
+	)
+
+	// Initialize reader/writer and initial code mapping
+	bitr := bit.NewReader(r)
+	bw := bufio.NewWriter(w)
+	t := newTranslations(defaultCodewordSize)
+
+	// Read the first codeword from the incoming stream
+	code, _, err = bitr.ReadBits(t.CodewordSize)
+	if err != nil {
+		return err
+	}
+
+	// Get the decoded list of bytes of this codeword. If the first code isn't
+	// in our initial map, something is wrong.
+	translation, exists = t.GetDecoded(t.Btoi(code))
+	log.Printf("translation: %v, exists: %v, code: %v", translation, exists, code)
+	if !exists {
+		return ErrDecoding
+	}
+
+	// Write the decoded value
+	_, err = bw.Write(translation)
+	if err != nil {
+		return err
+	}
+
+	// Save for detecting new translations
+	lastCode = code
+	firstCharLastTranslation = translation[0]
+
+	// Continue to read every other codeword
+	for {
+
+		// Read the next codeword from the incoming stream
+		code, _, err = bitr.ReadBits(t.CodewordSize)
+		if err != nil {
+			break
+		}
+
+		// Get the decoded list of bytes of this codeword
+		translation, exists = t.GetDecoded(t.Btoi(code))
+		log.Printf("translation: %v, exists: %v, code: %v", translation, exists, code)
+		if !exists {
+
+			// If the current translation doesn't exists, first
+			// look to our last code
+			translation, backupExists = t.GetDecoded(t.Btoi(lastCode))
+			log.Printf("translation: %v, backupExists: %v, code: %v, lastCode: %v", translation, backupExists, code, lastCode)
+
+			// If lastCode doesn't exist, we have a corrupted
+			// input file.
+			if !backupExists {
+				return ErrDecoding
+			}
+
+			// We can infer the translation of the current code by taking
+			// the translation of lastCode and appending the first
+			// character of the last translation
+			translation = append(translation, firstCharLastTranslation)
+		}
+
+		// Write the decoded value
+		_, err = bw.Write(translation)
+		if err != nil {
+			return err
+		}
+
+		// Save for next iteration
+		firstCharLastTranslation = translation[0]
+
+		// Save the two character entry that will inform our future
+		// translations
+		newEntry = append([]byte(nil), lastCode...)
+		newEntry = append(newEntry, firstCharLastTranslation)
+		x, y := t.Add(newEntry)
+		log.Printf("newEntry: %v, code: %v, added: %v", newEntry, x, y)
+
+		// Save for next iteration
+		lastCode = code
+	}
+
+	if err == io.EOF {
+		err = nil
+	}
+
+	return nil
 }

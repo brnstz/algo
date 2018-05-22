@@ -2,7 +2,6 @@ package lzw_test
 
 import (
 	"bytes"
-	"log"
 	"os"
 	"testing"
 
@@ -18,12 +17,22 @@ func TestLZW(t *testing.T) {
 	}
 	defer r.Close()
 
-	w := &bytes.Buffer{}
+	encB := &bytes.Buffer{}
+	// decB := &bytes.Buffer{}
 
-	err = lzw.Encode(r, w)
+	err = lzw.Encode(r, encB)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	log.Println(w.Len())
+	/*
+		FIXME
+		rb := bytes.NewBuffer(encB.Bytes())
+
+		err = lzw.Decode(rb, decB)
+		if err != nil {
+			t.Fatal(err)
+		}
+	*/
+
 }
