@@ -1,7 +1,7 @@
 package algo_test
 
 import (
-	"algo"
+	"github.com/brnstz/algo"
 
 	"fmt"
 	"io"

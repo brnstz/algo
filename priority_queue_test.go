@@ -1,7 +1,7 @@
 package algo_test
 
 import (
-	"algo"
+	"github.com/brnstz/algo"
 
 	"math"
 	"math/rand"
@@ -44,7 +44,7 @@ func TestPriorityQueueInsertDelete(t *testing.T) {
 		val = valItem.(PQInt)
 
 		if val > lastVal {
-			t.Fatal("Expected ordering from highest int to lowest int, but found sequenece %v, %v", lastVal, val)
+			t.Fatalf("Expected ordering from highest int to lowest int, but found sequenece %v, %v", lastVal, val)
 		}
 	}
 }
