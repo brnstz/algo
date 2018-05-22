@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"io"
+	"log"
 
 	"github.com/brnstz/algo/bit"
 )
@@ -105,8 +106,8 @@ func Encode(r io.Reader, w io.Writer) error {
 	return bitw.Flush()
 }
 
-// Decode reads compressed data from r and writes an uncompressed version to
-// w
+// Decode reads compressed data from r and writes an uncompressed version to w
+// FIXME: not yet working
 func Decode(r io.Reader, w io.Writer) error {
 	var (
 		// buffers of untranslated codewords
@@ -138,6 +139,7 @@ func Decode(r io.Reader, w io.Writer) error {
 	// Get the decoded list of bytes of this codeword. If the first code isn't
 	// in our initial map, something is wrong.
 	translation, exists = t.GetDecoded(t.Btoi(code))
+	log.Printf("translation: %v, exists: %v, code: %v", translation, exists, code)
 	if !exists {
 		return ErrDecoding
 	}
@@ -163,11 +165,13 @@ func Decode(r io.Reader, w io.Writer) error {
 
 		// Get the decoded list of bytes of this codeword
 		translation, exists = t.GetDecoded(t.Btoi(code))
+		log.Printf("translation: %v, exists: %v, code: %v", translation, exists, code)
 		if !exists {
 
 			// If the current translation doesn't exists, first
 			// look to our last code
 			translation, backupExists = t.GetDecoded(t.Btoi(lastCode))
+			log.Printf("translation: %v, backupExists: %v, code: %v, lastCode: %v", translation, backupExists, code, lastCode)
 
 			// If lastCode doesn't exist, we have a corrupted
 			// input file.
@@ -194,7 +198,8 @@ func Decode(r io.Reader, w io.Writer) error {
 		// translations
 		newEntry = append([]byte(nil), lastCode...)
 		newEntry = append(newEntry, firstCharLastTranslation)
-		t.Add(newEntry)
+		x, y := t.Add(newEntry)
+		log.Printf("newEntry: %v, code: %v, added: %v", newEntry, x, y)
 
 		// Save for next iteration
 		lastCode = code
