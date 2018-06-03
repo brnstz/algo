@@ -4,20 +4,38 @@ import (
 	"testing"
 )
 
+func TestBruteForceBitParity(t *testing.T) {
+	if BruteForceBitParity(254) != false {
+		t.Fatal("expected odd bit parity")
+	}
+	if BruteForceBitParity(255) != true {
+		t.Fatal("expected even bit parity")
+	}
+
+	if BruteForceBitParity(18446744073709551615) != true {
+		t.Fatal("expected even bit parity")
+	}
+
+	if BruteForceBitParity(18446744073709551614) != false {
+		t.Fatal("expected odd bit parity")
+	}
+
+}
+
 func TestBitParity(t *testing.T) {
-	if BruteForceBitParity(254) != 7 {
-		t.Fatal("expected bit parity of 7")
+	if BitParity(254) != false {
+		t.Fatal("expected odd bit parity")
 	}
-	if BruteForceBitParity(255) != 8 {
-		t.Fatal("expected bit parity of 8")
-	}
-
-	if BruteForceBitParity(18446744073709551615) != 64 {
-		t.Fatal("expected bit parity of 64")
+	if BitParity(255) != true {
+		t.Fatal("expected even bit parity")
 	}
 
-	if BruteForceBitParity(18446744073709551614) != 63 {
-		t.Fatal("expected bit parity of 64")
+	if BitParity(18446744073709551615) != true {
+		t.Fatal("expected even bit parity")
+	}
+
+	if BitParity(18446744073709551614) != false {
+		t.Fatal("expected odd bit parity")
 	}
 
 }
