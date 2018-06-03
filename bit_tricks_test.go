@@ -19,7 +19,6 @@ func TestBruteForceBitParity(t *testing.T) {
 	if BruteForceBitParity(18446744073709551614) != false {
 		t.Fatal("expected odd bit parity")
 	}
-
 }
 
 func TestBitParity(t *testing.T) {
@@ -36,6 +35,20 @@ func TestBitParity(t *testing.T) {
 
 	if BitParity(18446744073709551614) != false {
 		t.Fatal("expected odd bit parity")
+	}
+}
+
+func TestBitSwap(t *testing.T) {
+	var x int
+
+	x = BitSwap(0x20, 2, 3)
+	if x != 0x20 {
+		t.Fatalf("expected %b but got %b", 0x20, x)
+	}
+
+	x = BitSwap(0x1a, 3, 2)
+	if x != 0x16 {
+		t.Fatalf("expected %b but got %b", 0x16, x)
 	}
 
 }

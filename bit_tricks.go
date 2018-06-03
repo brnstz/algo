@@ -31,3 +31,16 @@ func BitParity(x uint64) bool {
 
 	return x&0x1 == 0
 }
+
+// BitSwap swaps the bits i and j in x
+func BitSwap(x int, i, j uint) int {
+	// If bits are the same, nothing to do.
+	if ((x >> i) & 1) == ((x >> j) & 1) {
+		return x
+	}
+
+	// Otherwise, we can just independently swap the bits
+	x ^= (1 << i) | (1 << j)
+
+	return x
+}
