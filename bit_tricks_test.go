@@ -1,6 +1,7 @@
 package algo
 
 import (
+	"log"
 	"testing"
 )
 
@@ -39,7 +40,7 @@ func TestBitParity(t *testing.T) {
 }
 
 func TestBitSwap(t *testing.T) {
-	var x int
+	var x int64
 
 	x = BitSwap(0x20, 2, 3)
 	if x != 0x20 {
@@ -51,4 +52,10 @@ func TestBitSwap(t *testing.T) {
 		t.Fatalf("expected %b but got %b", 0x16, x)
 	}
 
+}
+
+func TestBitReverse(t *testing.T) {
+	if BitReverse(1) != 9223372036854775808 {
+		log.Fatal("bit reverse failed")
+	}
 }

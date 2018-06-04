@@ -1,6 +1,6 @@
 package algo
 
-const bitParityLen = 64
+const bitLen = 64
 
 // BruteForceBitParity computes the parity of a uint64 using an O(n) algorithm,
 // returning true if the parity is even, false if odd.
@@ -10,7 +10,7 @@ func BruteForceBitParity(x uint64) bool {
 		i      uint8
 	)
 
-	for i = 0; i < bitParityLen; i++ {
+	for i = 0; i < bitLen; i++ {
 		result += int(x & 1)
 		x = x >> 1
 	}
@@ -25,7 +25,7 @@ func BitParity(x uint64) bool {
 		i uint8
 	)
 
-	for i = bitParityLen / 2; i > 0; i = i / 2 {
+	for i = bitLen / 2; i > 0; i = i / 2 {
 		x ^= x >> i
 	}
 
@@ -33,14 +33,37 @@ func BitParity(x uint64) bool {
 }
 
 // BitSwap swaps the bits i and j in x
-func BitSwap(x int, i, j uint) int {
+func BitSwap(x int64, i, j uint) int64 {
 	// If bits are the same, nothing to do.
 	if ((x >> i) & 1) == ((x >> j) & 1) {
 		return x
 	}
 
-	// Otherwise, we can just independently swap the bits
+	// Otherwise, we can just independently flip the bits
 	x ^= (1 << i) | (1 << j)
+
+	return x
+}
+
+// BitReverse returns x with its bits reversed
+func BitReverse(x uint64) uint64 {
+	var i, j uint
+
+	// Swap each bit by doing two at a time, only go up to
+	// bitLen / 2
+	for i = 0; i < bitLen/2; i++ {
+
+		// j is the high bit
+		j = bitLen - 1 - i
+
+		// Does the bit need to be swapped? If not, continue.
+		if ((x >> i) & 1) == ((x >> j) & 1) {
+			continue
+		}
+
+		// Otherwise, we just need to flip both.
+		x ^= (1 << i) | (1 << j)
+	}
 
 	return x
 }
