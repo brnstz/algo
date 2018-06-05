@@ -59,3 +59,23 @@ func TestBitReverse(t *testing.T) {
 		log.Fatal("bit reverse failed")
 	}
 }
+
+func TestBitAdd(t *testing.T) {
+	var x uint64
+
+	x = BitAdd(1, 3)
+	if x != 4 {
+		t.Fatalf("expected 1 + 3 = 4 but got %v", x)
+	}
+
+	x = BitAdd(0, 0)
+	if x != 0 {
+		t.Fatalf("expected 0 + 0 = 0 but got %v", x)
+	}
+
+	x = BitAdd(234234, 345984560791)
+	if x != 345984795025 {
+		t.Fatalf("expected 234234 + 345984560791 = 345984795025 but got %v", x)
+	}
+
+}

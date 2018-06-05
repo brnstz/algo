@@ -67,3 +67,33 @@ func BitReverse(x uint64) uint64 {
 
 	return x
 }
+
+// BitAdd adds x and y using only bitwise operations
+func BitAdd(x, y uint64) uint64 {
+	var (
+		z     uint64
+		carry uint64
+		set   uint64
+	)
+
+	// If both bits are set, we need to carry
+	carry = x & y
+
+	// The result will be 1 iff it's 0/1 or 1/0
+	z = x ^ y
+
+	for carry != 0 {
+
+		// Shift the carry over one bit to our temporary set value
+		set = carry << 1
+
+		// We need to carry next time if the current result and the set
+		// bit are 1 here
+		carry = z & set
+
+		// Put the set bit into the result
+		z ^= set
+	}
+
+	return z
+}
