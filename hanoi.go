@@ -1,49 +1,51 @@
 package algo
 
-import "log"
-
 const (
 	numHanoiPegs = 3
 )
 
-// HanoiPeg FIXME
+// HanoiPeg is a single peg on the Towers of Hanoi board. It holds zero
+// or more rings, which are integers that represent their size. The left
+// side of slice is the bottom, the right is the top.
 type HanoiPeg struct {
 	Rings []int
 }
 
-func moveRings(disks int, hp []HanoiPeg, source, target, aux int) [][]HanoiPeg {
+func moveRings(rings int, hp []HanoiPeg, source, target, aux int) [][]HanoiPeg {
 
 	var moves [][]HanoiPeg
 	move := make([]HanoiPeg, numHanoiPegs)
 
-	// If there are no disks left, we are done
-	if disks < 1 {
+	// If there are no rings left, we are done
+	if rings < 1 {
 		return nil
 	}
 
-	// Recursively move disks from source to aux
-	moves = append(moves, moveRings(disks-1, hp, source, aux, target)...)
+	// Recursively move rings from source to aux
+	moves = append(moves, moveRings(rings-1, hp, source, aux, target)...)
 
-	// Move a disk from source to the target
-	hp[target].Rings = append(hp[target].Rings, hp[source].Rings[len(hp[source].Rings)-1])
+	// Move a ring from source to the target
+	hp[target].Rings = append(
+		hp[target].Rings, hp[source].Rings[len(hp[source].Rings)-1],
+	)
 	hp[source].Rings = hp[source].Rings[:len(hp[source].Rings)-1]
 
-	// FIXME: why doesn't this work? because move[i] isn't large enough
+	// Copy current state as a "move"
 	for i := range hp {
-		log.Printf("copying %v to %v", hp[i].Rings, move[i].Rings)
+		move[i].Rings = make([]int, len(hp[i].Rings))
 		copy(move[i].Rings, hp[i].Rings)
 	}
 
 	moves = append(moves, move)
-	log.Printf("moves: %v", moves)
 
-	// Recursively move disk from aux to target
-	moves = append(moves, moveRings(disks-1, hp, aux, target, source)...)
+	// Recursively move ring from aux to target
+	moves = append(moves, moveRings(rings-1, hp, aux, target, source)...)
 
 	return moves
 }
 
-// TowersOfHanoi FIXME
+// TowersOfHanoi solves the Towers of Hanoi problem and returns a slice of
+// slices representing the order state of the pegs.
 func TowersOfHanoi(rings int) [][]HanoiPeg {
 	hp := make([]HanoiPeg, numHanoiPegs)
 
