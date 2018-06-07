@@ -1,6 +1,6 @@
 package algo
 
-import "log"
+import "fmt"
 
 var (
 	// AllPossiblePoints FIXME
@@ -11,11 +11,12 @@ var (
 // PointCombinations returns the number of ways we can arrive an points
 // given possiblePoints
 func PointCombinations(points int, possiblePoints []int) int {
-	log.Printf("points: %v\n", points)
+	fmt.Printf("points: %v\n", points)
 	var (
-		combinations int
-		exists       bool
-		pointsNow    int
+		combinations    int
+		combinationsNow int
+		exists          bool
+		pointsNow       int
 	)
 
 	// Check cache first
@@ -30,22 +31,27 @@ func PointCombinations(points int, possiblePoints []int) int {
 			pointsNow = pointsNow - poss
 
 			if pointsNow == 0 {
-				log.Printf("%v %v ++\n", pointsNow, poss)
+				fmt.Printf("now: %v %v ++\n", pointsNow, poss)
 				combinations++
 				continue
 			}
 
 			if len(possiblePoints) > 1 {
-				combinations += PointCombinations(
+				combinationsNow = PointCombinations(
 					pointsNow,
 					possiblePoints[:len(possiblePoints)-1],
 				)
+				combinations += combinationsNow
+				fmt.Printf("combo: %v %v %v %v ++\n",
+					pointsNow, poss, combinations, combinationsNow)
 			}
 		}
 	}
-	log.Println()
 
 	pointCache[points] = combinations
 
+	fmt.Printf("total: %v => %v", points, combinations)
+	fmt.Println()
+	fmt.Println()
 	return combinations
 }
