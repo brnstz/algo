@@ -2,11 +2,39 @@ package algo
 
 import "fmt"
 
-var (
-	// AllPossiblePoints FIXME
-	AllPossiblePoints = []int{7, 6, 3, 2}
-	pointCache        = map[int]int{}
-)
+// PointCombinationSolver FIXME
+type PointCombinationSolver struct {
+	possiblePoints []int
+	comboCache     map[int]int
+}
+
+// NewPointCombinationSolver FIXME
+func NewPointCombinationSolver(possiblePoints []int, points int) *PointCombinationSolver {
+	pcs := &PointCombinationSolver{
+		possiblePoints: possiblePoints,
+		points:         points,
+		comboCache:     map[int]int{},
+	}
+	return pcs
+}
+
+func (pcs *PointCombinationSolver) _solve(points int) int {
+	var (
+		combos int
+		exists bool
+	)
+
+	combos, exists = comboCache[points]
+	if exists {
+		return combos
+	}
+
+}
+
+// Solve FIXME
+func (pcs *PointCombinationSolver) Solve() {
+
+}
 
 // PointCombinations returns the number of ways we can arrive an points
 // given possiblePoints
