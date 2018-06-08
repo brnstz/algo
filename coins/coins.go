@@ -1,8 +1,11 @@
 package coins
 
-import "fmt"
+import (
+	"fmt"
+)
 
-func _crc(coins []int, amount int, cache map[string]int) int {
+// changeR is a helper function for ChangeRecursive
+func changeR(coins []int, amount int, cache map[string]int) int {
 	var (
 		key    string
 		combos int
@@ -31,8 +34,8 @@ func _crc(coins []int, amount int, cache map[string]int) int {
 	}
 
 	// Compute the number of combos both using and not using this coin
-	combos = _crc(coins[:len(coins)-1], amount, cache) +
-		_crc(coins, amount-coins[len(coins)-1], cache)
+	combos = changeR(coins[:len(coins)-1], amount, cache) +
+		changeR(coins, amount-coins[len(coins)-1], cache)
 
 	cache[key] = combos
 
@@ -43,7 +46,7 @@ func _crc(coins []int, amount int, cache map[string]int) int {
 // cache of previously solved sub-problems
 func ChangeRecursive(coins []int, amount int) int {
 	cache := map[string]int{}
-	return _crc(coins, amount, cache)
+	return changeR(coins, amount, cache)
 }
 
 // ChangeIterative returns the number of possible coin combinations using an
@@ -61,15 +64,50 @@ func ChangeIterative(coins []int, totalAmount int) int {
 
 		// For every amount equal to or greater than coin value
 		for amount := coin; amount <= totalAmount; amount++ {
-			fmt.Printf("before: amount: %v, combos: %v\n", amount, combos)
-
 			combos[amount] += combos[amount-coin]
-
-			fmt.Printf("after: amount: %v, combos: %v\n", amount, combos)
-
 		}
 
 	}
 
 	return combos[totalAmount]
+}
+
+// ChangeLimited returns all possible permutations of change for amount
+// with a limited number of coins
+func ChangeLimited(coins []int, used []int, amount int) [][]int {
+	var (
+		combos   [][]int
+		newCoins []int
+		newUsed  []int
+	)
+
+	// We've found a way to make change
+	if amount == 0 {
+		return [][]int{used}
+	}
+
+	// If amount is negative, we've gone too far
+	if amount < 0 {
+		return nil
+	}
+
+	// Iterate with one coin chosen
+	for i := range coins {
+		newCoins = make([]int, len(coins))
+		newUsed = make([]int, len(used))
+
+		copy(newCoins, coins)
+		copy(newUsed, used)
+
+		newCoins = append(newCoins[0:i], newCoins[i+1:]...)
+		newUsed = append(newUsed, coins[i])
+
+		combos = append(
+			combos,
+			ChangeLimited(newCoins, newUsed, amount-coins[i])...,
+		)
+	}
+
+	return combos
+
 }
