@@ -109,5 +109,25 @@ func ChangeLimited(coins []int, used []int, amount int) [][]int {
 	}
 
 	return combos
-
 }
+
+// ChangeLimitedDeduped returns all possible combinations of coins to make
+// amount with similar permutations deduped
+/* FIXME
+func ChangeLimitedDeduped(coins map[int]int, used map[int]int, amount int) []map[int]int {
+
+	// We've found a way to make change
+	if amount == 0 {
+		return [][]map[int]int{used}
+	}
+
+	// If amount is negative, we've gone too far
+	if amount < 0 {
+		return nil
+	}
+
+	for coin, count := range coins {
+
+	}
+}
+*/
