@@ -43,6 +43,7 @@ func (e *Edge) PQLess(other PQItem) bool {
 	return e.Weight > otherEdge.Weight
 }
 
+/*
 // Path defines a way to get from Edges[0].From to Edges[len(Edges)-1].To
 // along with the Weight (or cost / distance, etc.) of going there.
 type Path struct {
@@ -58,6 +59,7 @@ func (p *Path) PQLess(other PQItem) bool {
 	otherPath := other.(*Path)
 	return p.Weight > otherPath.Weight
 }
+*/
 
 // AddEdge creates a connection on the Graph from edge.From to edge.To
 func (g *Graph) AddEdge(edge *Edge) {
@@ -159,64 +161,84 @@ func (g *Graph) MinimumSpanningTree(v *Vertex) ([]*Edge, error) {
 	return mst, nil
 }
 
-// Graph from the incoming Vertex v.
-func (g *Graph) ShortestPath(v *Vertex) (map[*Vertex]*Path, error) {
+type vertexWeight struct {
+	vertex *Vertex
+	weight float64
+}
+
+// PQLess implements the PQItem to allow us to use edges on a PriorityQueue
+func (vw *vertexWeight) PQLess(other PQItem) bool {
+	otherVW := other.(*vertexWeight)
+	return vw.weight > otherVW.Weight
+}
+
+// ShortestPath FIXME
+func (g *Graph) ShortestPath(source *Vertex) (map[*Vertex]*Path, error) {
 	var (
 		weight float64
 		err    error
 		item   PQItem
-		path   *Path
+		vw     *vertexWeight
 	)
 
-	// Create a mapping of vertices to paths
-	paths := map[*Vertex]*Path{}
-
 	visited := map[*Vertex]bool{}
+	edgeTo := map[*Vertex]*Edge{}
+	// FIXME: change this to vertexWeight
+	weightTo := map[*Vertex]float64{}
 
-	// Create a priority queue of one path per vertex that will be
-	// reprioritized as we find the new shortest distance to
-	// the vertex
-	pathPQ := NewPriorityQueue(len(g.Adj))
+	vwPQ := NewPriorityQueue(len(g.Adj))
 
-	// Initialize all paths from v to other vertices. They will all
-	// be infinite weight, except the path to itself, which is zero.
 	for vertex := range g.Adj {
-		if vertex == v {
+		if vertex == source {
 			weight = 0.0
 		} else {
 			weight = math.MaxFloat64
 		}
 
-		// Create the initial path for this vertex
-		paths[v] = &Path{
-			Weight: weight,
-			Edges:  nil,
+		vw := &vertexWeight{
 			vertex: v,
-			edgeTo: nil,
+			weight: weight,
 		}
 
 		// Add this path to our queue of paths
-		pathPQ.Insert(paths[v])
+		vwPQ.Insert(paths[v])
 	}
 
-	// Process paths from lowest to highest weight
-	for !pathPQ.IsEmpty() {
-		item, err = pathPQ.DelMax()
+	// Process vertices from lowest to highest weight
+	for !vw.IsEmpty() {
+
+		// Coerce the pq item into a vertexWeight
+		item, err = vwPQ.DelMax()
 		if err != nil {
 			return nil, err
 		}
+		vw = item.(*vertexWeight)
 
-		path = item.(*Path)
+		// Is this correct?
+		if visited[vw.vertex] {
+			continue
+		}
 
-		visited[path.Vertex] = true
+		// Mark that we have visited this vertex
+		visited[vw.vertex] = true
 
-		for edge := range g.Adj[path.vertex] {
+		for edge := range g.Adj[vw.vertex] {
+
+			// Is this correct?
 			if visited[edge.To] {
 				continue
 			}
 
+			// What is the weight if we use this edge?
+			weight = weightTo[vw.vertex] + edge.Weight
+
+			if weight < weightTo[edge.To] {
+				// If that weight is less that the current weight to
+				// edge.To, then use it.
+
+				weightTo[edge.To] = weight
+				edgeTo[edge.To] = edge
+			}
 		}
-
 	}
-
 }
