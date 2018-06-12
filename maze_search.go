@@ -1,5 +1,6 @@
 package algo
 
+/*
 type mazeVertex struct {
 	x, y  int
 	edges []mazeEdge
@@ -21,6 +22,5 @@ func MazeSearch(maze [][]bool, startX, startY, endX, endY int) [][]int {
 		x: startX,
 		y: startY,
 	}
-
-	for 
 }
+*/

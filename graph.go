@@ -1,6 +1,10 @@
 package algo
 
-// Graph FIXME
+import (
+	"fmt"
+)
+
+// Graph is a system of Vertices connected via Edges
 type Graph struct {
 	Edges []*Edge
 
@@ -9,23 +13,36 @@ type Graph struct {
 	Adj map[*Vertex][]*Vertex
 }
 
-// Vertex FIXME
+// Vertex is a part of a Graph that is connected to other vertices via
+// Edges.
 type Vertex struct {
 	Value interface{}
 }
 
-// Edge FIXME
+func (v *Vertex) String() string {
+	return fmt.Sprintf("%v", v.Value)
+}
+
+// Edge is a connection between two Verticies with a particular Weight.
+// Connections are one directional. To create uni-directional graphs, use
+// one Edge for each direction.
 type Edge struct {
 	Weight float64
 
 	From, To *Vertex
 }
 
-func (edge *Edge) PQLess(other PQItem) {
-	otherEdge := (*Edge).other
+func (e *Edge) String() string {
+	return fmt.Sprintf("%v => %v @ %v", e.From.Value, e.To.Value, e.Weight)
+}
+
+// PQLess implements the PQItem to allow us to use edges on a PriorityQueue
+func (e *Edge) PQLess(other PQItem) bool {
+	otherEdge := other.(*Edge)
 	return e.Weight > otherEdge.Weight
 }
 
+// AddEdge creates a connection on the Graph from edge.From to edge.To
 func (g *Graph) AddEdge(edge *Edge) {
 	// Initialize adjacency mapping if necessary
 	if g.Adj == nil {
@@ -42,13 +59,15 @@ func (g *Graph) AddEdge(edge *Edge) {
 // MinimumSpanningTree finds the minimal list of edges to span the entire
 // graph that is connected to v. If v == nil, we use the first Edge.From
 // value.
-func (g *Graph) MinimumSpanningTree(v *Vertex) []*Edge {
+func (g *Graph) MinimumSpanningTree(v *Vertex) ([]*Edge, error) {
 	var (
 		mst        []*Edge
 		edge       *Edge
 		goodEdge   *Edge
 		edgePQ     *PriorityQueue
 		nextEdgePQ *PriorityQueue
+		err        error
+		pqItem     PQItem
 	)
 
 	// Mark which vertices we have visited
@@ -69,7 +88,7 @@ func (g *Graph) MinimumSpanningTree(v *Vertex) []*Edge {
 		} else {
 
 			// Otherwise there is no solution
-			return nil
+			return nil, nil
 		}
 	}
 
@@ -86,15 +105,19 @@ func (g *Graph) MinimumSpanningTree(v *Vertex) []*Edge {
 		for !edgePQ.IsEmpty() {
 
 			// Get the lowest weight edge on the priority queue
-			edge = (*Edge).edgePQ.DelMax()
+			pqItem, err = edgePQ.DelMax()
+			edge = pqItem.(*Edge)
+			if err != nil {
+				return nil, err
+			}
 
 			if goodEdge == nil && marked[edge.From] != marked[edge.To] {
-				// Find the lowest weight edge that expands our tree. It's
-				// something that is on our tree *and* expands it. That is, one
-				// vertex is marked but the other isn't.
+				// Find the lowest weight edge that expands our tree.  That is,
+				// one vertex is marked but the other isn't.
 				goodEdge = edge
 
 			} else {
+
 				// Otherwise, add it to the next queue
 				nextEdgePQ.Insert(edge)
 			}
@@ -116,5 +139,5 @@ func (g *Graph) MinimumSpanningTree(v *Vertex) []*Edge {
 		edgePQ = nextEdgePQ
 	}
 
-	return mst
+	return mst, nil
 }
