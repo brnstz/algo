@@ -2,6 +2,7 @@ package algo
 
 import (
 	"fmt"
+	"math"
 )
 
 // Graph is a system of Vertices connected via Edges
@@ -40,6 +41,22 @@ func (e *Edge) String() string {
 func (e *Edge) PQLess(other PQItem) bool {
 	otherEdge := other.(*Edge)
 	return e.Weight > otherEdge.Weight
+}
+
+// Path defines a way to get from Edges[0].From to Edges[len(Edges)-1].To
+// along with the Weight (or cost / distance, etc.) of going there.
+type Path struct {
+	Weight float64
+	Edges  []*Edge
+
+	vertex *Vertex
+	edgeTo *Edge
+}
+
+// PQLess implements the PQItem to allow us to use edges on a PriorityQueue
+func (p *Path) PQLess(other PQItem) bool {
+	otherPath := other.(*Path)
+	return p.Weight > otherPath.Weight
 }
 
 // AddEdge creates a connection on the Graph from edge.From to edge.To
@@ -140,4 +157,66 @@ func (g *Graph) MinimumSpanningTree(v *Vertex) ([]*Edge, error) {
 	}
 
 	return mst, nil
+}
+
+// Graph from the incoming Vertex v.
+func (g *Graph) ShortestPath(v *Vertex) (map[*Vertex]*Path, error) {
+	var (
+		weight float64
+		err    error
+		item   PQItem
+		path   *Path
+	)
+
+	// Create a mapping of vertices to paths
+	paths := map[*Vertex]*Path{}
+
+	visited := map[*Vertex]bool{}
+
+	// Create a priority queue of one path per vertex that will be
+	// reprioritized as we find the new shortest distance to
+	// the vertex
+	pathPQ := NewPriorityQueue(len(g.Adj))
+
+	// Initialize all paths from v to other vertices. They will all
+	// be infinite weight, except the path to itself, which is zero.
+	for vertex := range g.Adj {
+		if vertex == v {
+			weight = 0.0
+		} else {
+			weight = math.MaxFloat64
+		}
+
+		// Create the initial path for this vertex
+		paths[v] = &Path{
+			Weight: weight,
+			Edges:  nil,
+			vertex: v,
+			edgeTo: nil,
+		}
+
+		// Add this path to our queue of paths
+		pathPQ.Insert(paths[v])
+	}
+
+	// Process paths from lowest to highest weight
+	for !pathPQ.IsEmpty() {
+		item, err = pathPQ.DelMax()
+		if err != nil {
+			return nil, err
+		}
+
+		path = item.(*Path)
+
+		visited[path.Vertex] = true
+
+		for edge := range g.Adj[path.vertex] {
+			if visited[edge.To] {
+				continue
+			}
+
+		}
+
+	}
+
 }
