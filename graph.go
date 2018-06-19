@@ -9,9 +9,8 @@ import (
 type Graph struct {
 	Edges []*Edge
 
-	// Adj maps vertices to a slice of all the other vertices they
-	// are adjacent to.
-	Adj map[*Vertex][]*Vertex
+	// Adj maps vertices to a slice of all the other edges connected to it.
+	Adj map[*Vertex][]*Edge
 }
 
 // Vertex is a part of a Graph that is connected to other vertices via
@@ -65,11 +64,16 @@ func (p *Path) PQLess(other PQItem) bool {
 func (g *Graph) AddEdge(edge *Edge) {
 	// Initialize adjacency mapping if necessary
 	if g.Adj == nil {
-		g.Adj = map[*Vertex][]*Vertex{}
+		g.Adj = map[*Vertex][]*Edge{}
 	}
 
-	// Record that the from vertex is adjacent to the To vertex
-	g.Adj[edge.From] = append(g.Adj[edge.From], edge.To)
+	// Ensure that any vertex with no edge out exists in the map
+	if g.Adj[edge.To] == nil {
+		g.Adj[edge.To] = make([]*Edge, 0)
+	}
+
+	// Record that this vertex has another edge
+	g.Adj[edge.From] = append(g.Adj[edge.From], edge)
 
 	// Add this edge to our slice of edges
 	g.Edges = append(g.Edges, edge)
@@ -169,22 +173,22 @@ type vertexWeight struct {
 // PQLess implements the PQItem to allow us to use edges on a PriorityQueue
 func (vw *vertexWeight) PQLess(other PQItem) bool {
 	otherVW := other.(*vertexWeight)
-	return vw.weight > otherVW.Weight
+	return vw.weight > otherVW.weight
 }
 
-// ShortestPath FIXME
-func (g *Graph) ShortestPath(source *Vertex) (map[*Vertex]*Path, error) {
+// ShortestPath FIXME map[*Vertex]*Path
+func (g *Graph) ShortestPath(source *Vertex) (map[*Vertex]bool, error) {
 	var (
 		weight float64
 		err    error
 		item   PQItem
 		vw     *vertexWeight
+		i      int
 	)
 
 	visited := map[*Vertex]bool{}
 	edgeTo := map[*Vertex]*Edge{}
-	// FIXME: change this to vertexWeight
-	weightTo := map[*Vertex]float64{}
+	weightTo := map[*Vertex]*vertexWeight{}
 
 	vwPQ := NewPriorityQueue(len(g.Adj))
 
@@ -196,16 +200,21 @@ func (g *Graph) ShortestPath(source *Vertex) (map[*Vertex]*Path, error) {
 		}
 
 		vw := &vertexWeight{
-			vertex: v,
+			vertex: vertex,
 			weight: weight,
 		}
 
-		// Add this path to our queue of paths
-		vwPQ.Insert(paths[v])
+		fmt.Printf("1 %v => %v\n", vertex, vw)
+		weightTo[vertex] = vw
+
+		// Add this vertexWeight to our queue
+		vwPQ.Insert(vw)
 	}
 
+	fmt.Printf("weightTo: %v\n", weightTo)
+
 	// Process vertices from lowest to highest weight
-	for !vw.IsEmpty() {
+	for !vwPQ.IsEmpty() {
 
 		// Coerce the pq item into a vertexWeight
 		item, err = vwPQ.DelMax()
@@ -222,23 +231,41 @@ func (g *Graph) ShortestPath(source *Vertex) (map[*Vertex]*Path, error) {
 		// Mark that we have visited this vertex
 		visited[vw.vertex] = true
 
-		for edge := range g.Adj[vw.vertex] {
+		for _, edge := range g.Adj[vw.vertex] {
 
 			// Is this correct?
 			if visited[edge.To] {
 				continue
 			}
 
-			// What is the weight if we use this edge?
-			weight = weightTo[vw.vertex] + edge.Weight
+			fmt.Printf("4 %v %v %v %v %v\n", edge, edge.From, edge.To, weightTo[edge.From], weightTo[edge.To])
+			//fmt.Printf("5 %v\n", weightTo)
+			//fmt.Printf("5 %v\n", weightTo[edge.To])
 
-			if weight < weightTo[edge.To] {
+			// What is the weight if we use this edge?
+			weight = weightTo[vw.vertex].weight + edge.Weight
+
+			if weight < weightTo[edge.To].weight {
+
 				// If that weight is less that the current weight to
 				// edge.To, then use it.
-
-				weightTo[edge.To] = weight
+				weightTo[edge.To].weight = weight
 				edgeTo[edge.To] = edge
+
+				// Register the weight change with our priority queue
+				i, err = vwPQ.IndexOf(weightTo[edge.To])
+				if err != nil {
+					return nil, err
+				}
+
+				vwPQ.IndicateChange(i)
 			}
 		}
 	}
+
+	fmt.Printf("visited: %v\n", visited)
+	fmt.Printf("edgeTo: %v\n", edgeTo)
+	fmt.Printf("weightTo: %v\n", weightTo)
+
+	return nil, nil
 }
