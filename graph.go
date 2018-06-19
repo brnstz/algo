@@ -42,23 +42,31 @@ func (e *Edge) PQLess(other PQItem) bool {
 	return e.Weight > otherEdge.Weight
 }
 
-/*
 // Path defines a way to get from Edges[0].From to Edges[len(Edges)-1].To
 // along with the Weight (or cost / distance, etc.) of going there.
 type Path struct {
-	Weight float64
-	Edges  []*Edge
-
-	vertex *Vertex
-	edgeTo *Edge
+	Weight   float64
+	From, To *Vertex
+	Edges    []*Edge
 }
 
-// PQLess implements the PQItem to allow us to use edges on a PriorityQueue
-func (p *Path) PQLess(other PQItem) bool {
-	otherPath := other.(*Path)
-	return p.Weight > otherPath.Weight
+func (p *Path) String() string {
+	if len(p.Edges) < 1 {
+		return "No Path"
+	}
+
+	x := fmt.Sprintf("From %v to %v, weight: %v, Path: [\n",
+		p.From, p.To, p.Weight,
+	)
+
+	for _, edge := range p.Edges {
+		x += edge.String() + "\n"
+	}
+
+	x += "]"
+
+	return x
 }
-*/
 
 // AddEdge creates a connection on the Graph from edge.From to edge.To
 func (g *Graph) AddEdge(edge *Edge) {
@@ -176,42 +184,53 @@ func (vw *vertexWeight) PQLess(other PQItem) bool {
 	return vw.weight > otherVW.weight
 }
 
-// ShortestPath FIXME map[*Vertex]*Path
-func (g *Graph) ShortestPath(source *Vertex) (map[*Vertex]bool, error) {
+func (vw *vertexWeight) String() string {
+	return fmt.Sprintf("%v", vw.weight)
+}
+
+// ShortestPath returns a mapping of the shortest path from source to every
+// connected vertex in the Graph
+func (g *Graph) ShortestPath(source *Vertex) (map[*Vertex]*Path, error) {
 	var (
-		weight float64
 		err    error
+		weight float64
+		i      int
+
 		item   PQItem
 		vw     *vertexWeight
-		i      int
+		vertex *Vertex
+		next   *Vertex
+		edge   *Edge
 	)
 
 	visited := map[*Vertex]bool{}
 	edgeTo := map[*Vertex]*Edge{}
 	weightTo := map[*Vertex]*vertexWeight{}
+	paths := map[*Vertex]*Path{}
 
 	vwPQ := NewPriorityQueue(len(g.Adj))
 
-	for vertex := range g.Adj {
+	for vertex = range g.Adj {
+
 		if vertex == source {
+			// If this is the same vertex, weight is 0
 			weight = 0.0
 		} else {
+			// Otherwise it's infinite
 			weight = math.MaxFloat64
 		}
 
+		// Create a vertexWeight to put onto the priorityQueue
 		vw := &vertexWeight{
 			vertex: vertex,
 			weight: weight,
 		}
 
-		fmt.Printf("1 %v => %v\n", vertex, vw)
 		weightTo[vertex] = vw
 
 		// Add this vertexWeight to our queue
 		vwPQ.Insert(vw)
 	}
-
-	fmt.Printf("weightTo: %v\n", weightTo)
 
 	// Process vertices from lowest to highest weight
 	for !vwPQ.IsEmpty() {
@@ -223,7 +242,7 @@ func (g *Graph) ShortestPath(source *Vertex) (map[*Vertex]bool, error) {
 		}
 		vw = item.(*vertexWeight)
 
-		// Is this correct?
+		// Ignore vertices we've already visited
 		if visited[vw.vertex] {
 			continue
 		}
@@ -231,16 +250,12 @@ func (g *Graph) ShortestPath(source *Vertex) (map[*Vertex]bool, error) {
 		// Mark that we have visited this vertex
 		visited[vw.vertex] = true
 
-		for _, edge := range g.Adj[vw.vertex] {
+		for _, edge = range g.Adj[vw.vertex] {
 
-			// Is this correct?
+			// Ignore vertices we've already visited
 			if visited[edge.To] {
 				continue
 			}
-
-			fmt.Printf("4 %v %v %v %v %v\n", edge, edge.From, edge.To, weightTo[edge.From], weightTo[edge.To])
-			//fmt.Printf("5 %v\n", weightTo)
-			//fmt.Printf("5 %v\n", weightTo[edge.To])
 
 			// What is the weight if we use this edge?
 			weight = weightTo[vw.vertex].weight + edge.Weight
@@ -257,15 +272,47 @@ func (g *Graph) ShortestPath(source *Vertex) (map[*Vertex]bool, error) {
 				if err != nil {
 					return nil, err
 				}
-
 				vwPQ.IndicateChange(i)
+
 			}
 		}
 	}
 
-	fmt.Printf("visited: %v\n", visited)
-	fmt.Printf("edgeTo: %v\n", edgeTo)
-	fmt.Printf("weightTo: %v\n", weightTo)
+	// Create a Path object for each vertex that isn't the source
+	for vertex = range g.Adj {
+		if vertex == source {
+			continue
+		}
 
-	return nil, nil
+		// Initialize path with the weight and the source/destination
+		path := &Path{
+			Weight: weightTo[vertex].weight,
+			From:   source,
+			To:     vertex,
+		}
+
+		// Initialize next vertex to the destination
+		next = vertex
+		for {
+
+			// Get the next edge we need
+			edge = edgeTo[next]
+
+			// Append to our list of edges
+			path.Edges = append(path.Edges, edge)
+
+			// If we made it to the source, we are done
+			if edge.From == source {
+				break
+			}
+
+			// Otherwise, go to the From side of this edge
+			next = edge.From
+		}
+
+		// We've found the path, map it to the destination
+		paths[vertex] = path
+	}
+
+	return paths, nil
 }

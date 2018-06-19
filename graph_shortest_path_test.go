@@ -1,8 +1,11 @@
 package algo
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestShortestPath(t *testing.T) {
+	var err error
 
 	g := Graph{}
 	v1 := &Vertex{Value: "Boston"}
@@ -31,8 +34,39 @@ func TestShortestPath(t *testing.T) {
 			From: v4, To: v5, Weight: 40,
 		},
 	)
+	g.AddEdge(
+		&Edge{
+			From: v1, To: v5, Weight: 101,
+		},
+	)
+	g.AddEdge(
+		&Edge{
+			From: v5, To: v3, Weight: 10,
+		},
+	)
+	g.AddEdge(
+		&Edge{
+			From: v5, To: v3, Weight: 5,
+		},
+	)
 
-	g.ShortestPath(v1)
-	t.Fatal()
+	g.AddEdge(
+		&Edge{
+			From: v1, To: v2, Weight: 3,
+		},
+	)
+
+	paths, err := g.ShortestPath(v1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if paths[v2].Weight != 3 {
+		t.Fatalf("Expected path of weight 3 but got this path: %v", paths[v2])
+	}
+
+	if paths[v3].Weight != 102 {
+		t.Fatalf("Expected path of weight 102 but got this path: %v", paths[v3])
+	}
 
 }
