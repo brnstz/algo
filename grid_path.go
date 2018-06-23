@@ -7,11 +7,11 @@ import (
 
 func findVertex(vertices [][]*Vertex, x, y int) *Vertex {
 
-	if len(vertices) < x {
+	if x >= len(vertices) || x < 0 {
 		// Bad x coord
 		return nil
 
-	} else if len(vertices[x]) < y {
+	} else if y >= len(vertices[x]) || y < 0 {
 		// Bad x, y coord
 		return nil
 
@@ -25,6 +25,10 @@ func findVertex(vertices [][]*Vertex, x, y int) *Vertex {
 }
 
 func createVertices(grid [][]bool) [][]*Vertex {
+	var (
+		i, j int
+	)
+
 	vertices := make([][]*Vertex, len(grid))
 
 	for i = 0; i < len(grid); i++ {
@@ -88,6 +92,7 @@ func GridPath(grid [][]bool, sx, sy, ex, ey int) *Path {
 					Weight: 1,
 				}
 				g.AddEdge(edge)
+
 			}
 		}
 	}
