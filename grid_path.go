@@ -105,3 +105,76 @@ func GridPath(grid [][]bool, sx, sy, ex, ey int) *Path {
 
 	return paths[end]
 }
+
+var (
+	diffs = [][]int{
+		{0, 1},
+		{0, -1},
+		{1, 0},
+		{-1, 0},
+	}
+)
+
+func validPoint(grid [][]bool, x, y int) bool {
+	return x >= 0 && x < len(grid) && y >= 0 && y < len(grid[x]) && grid[x][y]
+}
+
+func mk(x, y int) string {
+	return fmt.Sprintf("%v,%v", x, y)
+}
+
+func gpHelper(path [][]int, visited map[string]bool, grid [][]bool, sx, sy, ex, ey int) [][]int {
+	var (
+		x, y int
+	)
+
+	if sx == ex && sy == ey {
+		return path
+	}
+
+	for _, d := range diffs {
+		x = sx + d[0]
+		y = sy + d[1]
+
+		if validPoint(grid, x, y) && !visited[mk(x, y)] {
+
+			// Copy path
+			newPath := make([][]int, len(path)+1)
+			copy(newPath, path)
+			newPath[len(path)] = []int{x, y}
+
+			// Copy visited
+			newVisited := map[string]bool{}
+			for k, v := range visited {
+				newVisited[k] = v
+			}
+			newVisited[mk(x, y)] = true
+
+			foundPath := gpHelper(newPath, newVisited, grid, x, y, ex, ey)
+
+			if foundPath != nil {
+				return foundPath
+			}
+		}
+	}
+
+	return nil
+}
+
+// GridPathSimple recursively finds some path from (sx, sy) to (ex, ey) if one
+// exists using a non-optimized search.
+func GridPathSimple(grid [][]bool, sx, sy, ex, ey int) [][]int {
+
+	// Can't do it if the start or end are not valid points
+	if !validPoint(grid, sx, sy) || !validPoint(grid, ex, ey) {
+		return nil
+	}
+
+	// Initialize path and visited
+	path := [][]int{{sx, sy}}
+	visited := map[string]bool{}
+	visited[mk(sx, sy)] = true
+
+	// Find it
+	return gpHelper(path, visited, grid, sx, sy, ex, ey)
+}
