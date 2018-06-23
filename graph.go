@@ -298,6 +298,12 @@ func (g *Graph) ShortestPath(source *Vertex) (map[*Vertex]*Path, error) {
 			// Get the next edge we need
 			edge = edgeTo[next]
 
+			// If there is no edge, then stop and clear path
+			if edge == nil {
+				path = nil
+				break
+			}
+
 			// Append to our list of edges
 			path.Edges = append(path.Edges, edge)
 
