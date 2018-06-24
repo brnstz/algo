@@ -51,8 +51,8 @@ func mnds(k int, s []int, cache map[string]int) int {
 	}
 
 	if len(s) < 2 {
-		cache[key] = 0
-		return 0
+		cache[key] = 1
+		return 1
 	}
 
 	if isNonDivisibleSubset(k, s) {
