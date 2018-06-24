@@ -1,7 +1,6 @@
 package algo
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 )
@@ -86,10 +85,7 @@ func mnds(k int, s []int, cache map[string]int) int {
 // the sum of any two items is not divisible by k
 func MaxNonDivisibleSubset(k int, s []int) int {
 	cache := map[string]int{}
-	result := mnds(k, s, cache)
-	fmt.Printf("result: %v, cache: %v", result, cache)
-
-	return result
+	return mnds(k, s, cache)
 }
 
 // MaxNonDivisibleSubsetIterative returns the size of the maximal subset of s
