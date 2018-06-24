@@ -1,6 +1,9 @@
 package algo
 
-// Leaderboard FIXME
+// https://www.hackerrank.com/challenges/climbing-the-leaderboard/problem
+
+// Leaderboard returns the place among topScores of each value in
+// userScores.
 func Leaderboard(topScores []int, userScores []int) []int {
 	var (
 		worstPlace, bestPlace, place   int
@@ -43,6 +46,7 @@ func Leaderboard(topScores []int, userScores []int) []int {
 				break
 			}
 
+			// If last score is different, then increment the place value.
 			if topScore != lastScore {
 				place++
 			}
@@ -52,7 +56,7 @@ func Leaderboard(topScores []int, userScores []int) []int {
 		}
 
 		// If we didn't find a place, we want to use either our best possible
-		// place or place + 1.
+		// place or the current place.
 		if !found {
 
 			if bestPlace == worstPlace {
