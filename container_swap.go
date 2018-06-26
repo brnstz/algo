@@ -1,26 +1,59 @@
 package algo
 
-import "log"
+import "fmt"
 
 // https://www.hackerrank.com/challenges/organizing-containers-of-balls/problem
 
-func swappable(container [][]int, n int, totals []int, bA []int, cA []int) bool {
+func swappable(container [][]int, n int, assigned int, totals []int, ballAssignment []int, containerUsed map[int]bool) bool {
 	// totals[i] = the total number of balls of type i
-	// assignments[i] = the container where balls of type i are stored
+	// bA[i] = ball i is assigned to container bA[i]
+	// cA[i] = container i is assigned to ball cA[i]
+
+	fmt.Printf("%v %v %v %v %v %v\n\n",
+		container, n, assigned, totals, ballAssignment, containerUsed,
+	)
 
 	var (
 		deficit, i, j int
 	)
 
-	if bA[n-1] != -1 {
+	if assigned == n {
 		for i = 0; i < n; i++ {
-			deficit = totals[i] - container[bA[i]][i]
+			deficit += totals[i] - container[ballAssignment[i]][i]
 		}
+
+		fmt.Printf("what is the deficit? %v\n", deficit)
 
 		return deficit%2 == 0
 	}
 
-	for i = 0; i < n; i++ {
+	// Assign the next ball
+	assigned++
+
+	// Assign the ball to all possible containers
+	for j = 0; j < n; j++ {
+		if containerUsed[j] {
+			continue
+		}
+
+		newCU := map[int]bool{}
+		for k, v := range containerUsed {
+			newCU[k] = v
+		}
+		newCU[j] = true
+
+		newBA := make([]int, len(ballAssignment)+1)
+		copy(newBA, ballAssignment)
+		fmt.Printf("%v %v %v\n", newBA, ballAssignment, assigned)
+		newBA[assigned-1] = j
+
+		if swappable(container, n, assigned, totals, newBA, newCU) {
+			return true
+		}
+
+	}
+
+	/*
 		for j = 0; j < n; j++ {
 			if bA[i] == -1 && cA[j] == -1 {
 				newBA := make([]int, n)
@@ -36,7 +69,7 @@ func swappable(container [][]int, n int, totals []int, bA []int, cA []int) bool 
 				}
 			}
 		}
-	}
+	*/
 
 	return false
 }
@@ -46,26 +79,22 @@ func ContainerSwap(container [][]int) bool {
 	var (
 		i, j, n int
 
-		totals, bA, cA []int
+		totals []int
 	)
 
 	// Assume square matrix
 	n = len(container)
 
-	bA = make([]int, n)
-	cA = make([]int, n)
 	totals = make([]int, n)
 
 	for i = 0; i < n; i++ {
-		log.Printf("%v %v", len(bA), i)
-		bA[i] = -1
-		cA[i] = -1
 		for j = 0; j < n; j++ {
 			totals[j] += container[i][j]
 		}
 	}
+	containerUsed := map[int]bool{}
 
-	return swappable(container, n, totals, bA, cA)
+	return swappable(container, n, 0, totals, nil, containerUsed)
 }
 
 // - each container contains only balls of the same type
