@@ -1,12 +1,16 @@
-package algo
+package puzzles
+
+import (
+	"github.com/brnstz/algo"
+)
 
 // MaxProfit accepts a series of prices over time and returns the maximum
 // profit that can be extracted by buying at time i and selling at time j where
 // j > i.
 func MaxProfit(prices []int) int {
 	var (
-		minBuy    = MaxIntVal
-		maxProfit = MinIntVal
+		minBuy    = algo.MaxIntVal
+		maxProfit = algo.MinIntVal
 		profit    int
 	)
 

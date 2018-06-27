@@ -1,11 +1,13 @@
-package algo
+package puzzles
 
 import (
 	"fmt"
 	"log"
+
+	"github.com/brnstz/algo"
 )
 
-func findVertex(vertices [][]*Vertex, x, y int) *Vertex {
+func findVertex(vertices [][]*algo.Vertex, x, y int) *algo.Vertex {
 
 	if x >= len(vertices) || x < 0 {
 		// Bad x coord
@@ -24,19 +26,19 @@ func findVertex(vertices [][]*Vertex, x, y int) *Vertex {
 	return vertices[x][y]
 }
 
-func createVertices(grid [][]bool) [][]*Vertex {
+func createVertices(grid [][]bool) [][]*algo.Vertex {
 	var (
 		i, j int
 	)
 
-	vertices := make([][]*Vertex, len(grid))
+	vertices := make([][]*algo.Vertex, len(grid))
 
 	for i = 0; i < len(grid); i++ {
-		vertices[i] = make([]*Vertex, len(grid[i]))
+		vertices[i] = make([]*algo.Vertex, len(grid[i]))
 
 		for j = 0; j < len(grid[i]); j++ {
 			if grid[i][j] {
-				vertices[i][j] = &Vertex{
+				vertices[i][j] = &algo.Vertex{
 					Value: fmt.Sprintf("(%v,%v)", i, j),
 				}
 			}
@@ -50,16 +52,16 @@ func createVertices(grid [][]bool) [][]*Vertex {
 // grid. A true entry in the grid is a valid path, where as false is
 // not (e.g., it's a wall). All paths have equal weight and all paths
 // are two dimensional.
-func GridPath(grid [][]bool, sx, sy, ex, ey int) *Path {
+func GridPath(grid [][]bool, sx, sy, ex, ey int) *algo.Path {
 	var (
 		i, j, x, y int
 		d          []int
-		edge       *Edge
-		start, end *Vertex
-		from, to   *Vertex
+		edge       *algo.Edge
+		start, end *algo.Vertex
+		from, to   *algo.Vertex
 	)
 
-	g := Graph{}
+	g := algo.Graph{}
 	vertices := createVertices(grid)
 
 	// Given an x, y position, these diffs to x, y are all possible
@@ -86,7 +88,7 @@ func GridPath(grid [][]bool, sx, sy, ex, ey int) *Path {
 					continue
 				}
 
-				edge = &Edge{
+				edge = &algo.Edge{
 					From:   from,
 					To:     to,
 					Weight: 1,

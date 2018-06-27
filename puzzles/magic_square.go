@@ -1,4 +1,4 @@
-package algo
+package puzzles
 
 func isMagic(sq [][]int, n int) bool {
 	var i, j, k int

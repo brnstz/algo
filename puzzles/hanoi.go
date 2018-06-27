@@ -1,4 +1,4 @@
-package algo
+package puzzles
 
 const (
 	numHanoiPegs = 3

@@ -1,4 +1,4 @@
-package algo
+package puzzles
 
 // https://www.hackerrank.com/challenges/organizing-containers-of-balls/problem
 

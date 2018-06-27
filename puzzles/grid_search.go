@@ -1,4 +1,4 @@
-package algo
+package puzzles
 
 func gsHelper(subpattern string, grid [][]byte, x, y int) bool {
 
