@@ -1,11 +1,19 @@
 package puzzles
 
-func bgHelper(orig string, word string, letters string) string {
+func bgHelper(orig string, word string, letters string, seen map[string]bool) string {
 	var (
 		i                    int
 		letter               rune
 		minWord, thisMinWord string
 	)
+
+	key := word + "|" + letters
+
+	if seen[key] {
+		return ""
+	}
+
+	seen[key] = true
 
 	// If the word we have so far is longer than the original
 	// and it's lexigraphically before it, there is no solution
@@ -25,7 +33,7 @@ func bgHelper(orig string, word string, letters string) string {
 
 		// Get the min word with this letter added
 		thisMinWord = bgHelper(
-			orig, word+string(letter), letters[:i]+letters[i+1:],
+			orig, word+string(letter), letters[:i]+letters[i+1:], seen,
 		)
 
 		// If it's empty, ignore
@@ -52,6 +60,8 @@ func BiggerIsGreater(s string) string {
 		ok       bool
 	)
 
+	seen := map[string]bool{}
+
 	// Short cut. If every character of the string is lexigraphically less or
 	// equal than the prior character in the string, there is no answer.
 	for i = 1; i < len(s); i++ {
@@ -69,7 +79,7 @@ func BiggerIsGreater(s string) string {
 		word = s[:len(s)-i]
 		letters = s[len(s)-i:]
 
-		nextWord = bgHelper(s, word, letters)
+		nextWord = bgHelper(s, word, letters, seen)
 		if nextWord != "" {
 			return nextWord
 		}
