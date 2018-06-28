@@ -44,12 +44,36 @@ func bgHelper(orig string, word string, letters string) string {
 // BiggerIsGreater returns the next lexigraphically sorted word we can
 // get by swapping one or more of the letters of s.
 func BiggerIsGreater(s string) string {
-	var nextWord string
+	var (
+		nextWord string
+		i        int
+		letters  string
+		word     string
+		ok       bool
+	)
 
-	nextWord = bgHelper(s, "", s)
-	if nextWord == "" {
+	// Short cut. If every character of the string is lexigraphically less or
+	// equal than the prior character in the string, there is no answer.
+	for i = 1; i < len(s); i++ {
+		if s[i-1] < s[i] {
+			ok = true
+			break
+		}
+	}
+
+	if !ok {
 		return "no answer"
 	}
 
-	return nextWord
+	for i = 1; i <= len(s); i++ {
+		word = s[:len(s)-i]
+		letters = s[len(s)-i:]
+
+		nextWord = bgHelper(s, word, letters)
+		if nextWord != "" {
+			return nextWord
+		}
+	}
+
+	return "no answer"
 }
