@@ -173,8 +173,8 @@ func Bomberman(n int, gridIn []string) []string {
 
 	for n > 0 {
 		// Step 3
-		placeBombs(bombDetSecs, grid)
 		detBombs(bombDetSecs, grid)
+		placeBombs(bombDetSecs, grid)
 		n--
 		// printGrid(grid)
 
