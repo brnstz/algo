@@ -14,10 +14,13 @@ const (
 
 // https://www.hackerrank.com/challenges/bomber-man/problem
 
+// bdetKey creates a hashable key from an x, y value
 func bdetKey(x, y int) string {
 	return fmt.Sprintf("%v,%v", x, y)
 }
 
+// bdetRevKey returns an x, y coordinate based on a key previously
+// created in bdetKey
 func bdetRevKey(key string) (int, int) {
 	var (
 		x, y int
@@ -29,22 +32,29 @@ func bdetRevKey(key string) (int, int) {
 	return x, y
 }
 
+// detOneBomb detonates the bomb at the key bombKey and removes itself
+// and its neighbors from the detonation list and the grid
 func detOneBomb(bombKey string, bombDetSecs map[string]int, grid [][]rune) {
 	var (
 		bx, by, x, y int
 		neighborKey  string
 	)
 
+	// The coords of the bomb
 	bx, by = bdetRevKey(bombKey)
 
+	// Deteonate our four neighbors and ourselves
 	diffs := [][]int{
 		{0, 1}, {1, 0}, {0, -1}, {-1, 0}, {0, 0},
 	}
 
 	for _, diff := range diffs {
+
+		// The coords we are detonating
 		x = bx + diff[0]
 		y = by + diff[1]
 
+		// Make sure it's not off the grid
 		if x < 0 || x >= len(grid) {
 			continue
 		}
@@ -53,6 +63,7 @@ func detOneBomb(bombKey string, bombDetSecs map[string]int, grid [][]rune) {
 			continue
 		}
 
+		// Create they key for the neighbor
 		neighborKey = bdetKey(x, y)
 
 		// Delete the neighbor.
@@ -61,6 +72,8 @@ func detOneBomb(bombKey string, bombDetSecs map[string]int, grid [][]rune) {
 	}
 }
 
+// detBombs checks the detonation time of any bombs and detonates or
+// decreases their detonation time accordingly.
 func detBombs(bombDetSecs map[string]int, grid [][]rune) {
 	var (
 		bombsToDetonate []string
@@ -84,6 +97,8 @@ func detBombs(bombDetSecs map[string]int, grid [][]rune) {
 	}
 }
 
+// placeBombs places a bomb in all grid spaces that don't currently
+// have one.
 func placeBombs(bombDetSecs map[string]int, grid [][]rune) {
 	var (
 		i, j int
@@ -111,8 +126,18 @@ func printGrid(grid [][]rune) {
 	fmt.Println()
 }
 
+func convertGrid(grid [][]rune) []string {
+	newGrid := make([]string, len(grid))
+
+	for i, row := range grid {
+		newGrid[i] = string(row)
+	}
+
+	return newGrid
+}
+
 // Bomberman FIXME
-func Bomberman(n int, gridIn []string) [][]rune {
+func Bomberman(n int, gridIn []string) []string {
 	var (
 		i, j int
 		grid [][]rune
@@ -129,7 +154,7 @@ func Bomberman(n int, gridIn []string) [][]rune {
 		}
 	}
 
-	printGrid(grid)
+	// printGrid(grid)
 
 	bombDetSecs := map[string]int{}
 
@@ -144,22 +169,22 @@ func Bomberman(n int, gridIn []string) [][]rune {
 	// Step 2
 	detBombs(bombDetSecs, grid)
 	n--
-	printGrid(grid)
+	// printGrid(grid)
 
 	for n > 0 {
 		// Step 3
 		placeBombs(bombDetSecs, grid)
 		detBombs(bombDetSecs, grid)
 		n--
-		printGrid(grid)
+		// printGrid(grid)
 
 		// Step 4
 		if n > 0 {
 			detBombs(bombDetSecs, grid)
 			n--
-			printGrid(grid)
+			// printGrid(grid)
 		}
 	}
 
-	return grid
+	return convertGrid(grid)
 }

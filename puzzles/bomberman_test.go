@@ -25,26 +25,23 @@ func TestBomberman(t *testing.T) {
 	}
 
 	failed := false
-	for i := 0; i < len(x); i++ {
-		for j := 0; j < len(x[i]); j++ {
-			if x[i][j] != expected[i][j] {
-				failed = true
-			}
+	for i := range x {
+		if x[i] != expected[i] {
+			failed = true
+			break
 		}
 	}
 
-	for i, v := range x {
-		for j, char := range v {
-		}
-		fmt.Println()
-	}
-
-	for _, v := range x {
-		for _, char := range v {
-			fmt.Printf("%c", char)
+	if failed {
+		fmt.Println("expected:")
+		for i := range expected {
+			fmt.Println(expected[i])
 		}
 		fmt.Println()
+		fmt.Println("but got:")
+		for i := range x {
+			fmt.Println(x[i])
+		}
+		t.Fatal()
 	}
-
-	t.Fatal()
 }
