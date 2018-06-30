@@ -136,7 +136,8 @@ func convertGrid(grid [][]rune) []string {
 	return newGrid
 }
 
-// Bomberman FIXME
+// Bomberman returns the new grid after running the bomberman problem as
+// described in the link above.
 func Bomberman(n int, gridIn []string) []string {
 	var (
 		i, j int
@@ -154,10 +155,8 @@ func Bomberman(n int, gridIn []string) []string {
 		}
 	}
 
-	// printGrid(grid)
-
+	// Create a map of bombs to their detonation time
 	bombDetSecs := map[string]int{}
-
 	for i = 0; i < len(grid); i++ {
 		for j = 0; j < len(grid[i]); j++ {
 			if grid[i][j] == bbomb {
@@ -166,25 +165,37 @@ func Bomberman(n int, gridIn []string) []string {
 		}
 	}
 
-	// Step 2
+	// Step 1, the bombs have been placed.
+
+	// Step 2, just decrement the detonation time
 	detBombs(bombDetSecs, grid)
 	n--
-	// printGrid(grid)
 
-	for n > 0 {
-		// Step 3
-		detBombs(bombDetSecs, grid)
-		placeBombs(bombDetSecs, grid)
-		n--
-		// printGrid(grid)
-
-		// Step 4
-		if n > 0 {
-			detBombs(bombDetSecs, grid)
-			n--
-			// printGrid(grid)
+	// At this point, we have a 4 step pattern. We only
+	// need to run the remainder beyond this pattern divided
+	// by 4.
+	if n > 0 {
+		if n%4 == 0 {
+			n = 4
+		} else {
+			n = n % 4
 		}
 	}
 
+	for n > 0 {
+		// Step 3, check for potentially detonating bombs and then
+		// place bombs in all of the empty grid spaces.
+		detBombs(bombDetSecs, grid)
+		placeBombs(bombDetSecs, grid)
+		n--
+
+		// Step 4, check for potentially detonating bombs.
+		if n > 0 {
+			detBombs(bombDetSecs, grid)
+			n--
+		}
+	}
+
+	// Return a string version of the grid.
 	return convertGrid(grid)
 }

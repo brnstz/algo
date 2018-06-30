@@ -6,7 +6,7 @@ import (
 )
 
 func TestBomberman(t *testing.T) {
-	x := Bomberman(3, []string{
+	x := Bomberman(15, []string{
 		".......",
 		"...O...",
 		"....O..",
